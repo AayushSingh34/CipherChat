@@ -49,6 +49,7 @@ Numberless fully - encrypted - based Chat system/
 │   └── vite.config.js       # Vite build & proxy configurations
 ├── Dockerfile               # Multi-stage production container build
 └── README.md                # Project documentation
+
 🔄 Project Workflow
 Authentication: User registers a username and passphrase. The browser generates local cryptographic identity keys via the WebCrypto API.
 
@@ -61,7 +62,7 @@ Personal DMs: Messages are encrypted locally using a shared secret derived from 
 Channels (Groups/Communities): Messages are broadcast securely to all active channel members.
 
 Real-time Delivery: STOMP WebSockets instantly route messages, typing statuses, and presence updates to connected clients.
-
+```
 🚀 Getting Started & Instructions to Use
 Prerequisites
 Java 21 (or compatible JDK)
