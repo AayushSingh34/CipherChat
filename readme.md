@@ -49,3 +49,41 @@ Numberless fully - encrypted - based Chat system/
 │   └── vite.config.js       # Vite build & proxy configurations
 ├── Dockerfile               # Multi-stage production container build
 └── README.md                # Project documentation
+🔄 Project Workflow
+Authentication: User registers a username and passphrase. The browser generates local cryptographic identity keys via the WebCrypto API.
+
+Discovery & Connection: Users can toggle radar visibility to discover nearby encrypted nodes or add friends directly via username.
+
+E2EE Messaging:
+
+Personal DMs: Messages are encrypted locally using a shared secret derived from recipient public keys before transmission.
+
+Channels (Groups/Communities): Messages are broadcast securely to all active channel members.
+
+Real-time Delivery: STOMP WebSockets instantly route messages, typing statuses, and presence updates to connected clients.
+
+🚀 Getting Started & Instructions to Use
+Prerequisites
+Java 21 (or compatible JDK)
+
+Node.js (v18+) and npm
+
+Maven (Included via wrapper or local installation)
+Local Development Setup
+1. Start the Backend Server
+Open a terminal in the backend folder and run:
+
+PowerShell
+.\apache-maven-3.9.6\bin\mvn.cmd clean spring-boot:run
+(The Spring Boot server will start on port 8080 with an embedded file-backed H2 database).
+
+2. Start the Frontend Development Server
+Open a second terminal in the frontend folder and run:
+
+PowerShell
+npm install
+npm run dev
+(Vite will spin up the frontend on http://localhost:5173 with automatic API and WebSocket proxying).
+
+3. Open in Browser
+Navigate to http://localhost:5173 in your browser, register two separate user accounts (e.g., in two separate browser windows/incognito), add each other as friends, and start chatting securely!
