@@ -1,74 +1,51 @@
-cipher-chat-project/
-├── README.md
-├── docker-compose.yml                  # PostgreSQL + PostGIS & Redis containers
+# 🔒 CipherChat: Zero-Phone End-to-End Encrypted (E2EE) Chat System
+
+CipherChat is a modern, privacy-first communication platform that operates without requiring phone numbers, SIM cards, or centralized identity linkage. Built with **Java Spring Boot**, **React (Vite)**, and **WebSockets**, it provides high-security peer-to-peer style messaging, group circles, and open communities with full client-side encryption and admin moderation workflows.
+
+---
+
+## 🌟 Key Features
+
+* **Zero Phone Numbers / SIM Cards Required:** Instant username and secure passphrase registration.
+* **True End-to-End Encryption (E2EE):** Messages, photos, and files are encrypted in-browser using **AES-256-GCM** before touching the server.
+* **Voice Note Recording (`AUDIO`):** Built-in browser `MediaRecorder` API allowing instant recording, sending, and playback of voice messages across personal, group, and community chats.
+* **Groups & Open Communities:** Support for public and private channels with admin approval workflows, member moderation, and block/unblock controls.
+* **Live Presence & Typing Indicators:** Real-time online status tracking and typing notifications over STOMP WebSockets.
+* **Custom Chat Wallpaper & Themes:** Personal theme customizer with system wallpaper upload support.
+* **Message & File Deletion:** Ability to delete sent messages, files, photos, or voice notes for everyone in real time.
+* **E2EE Key Backups:** Export and import local cryptographic identity keys as `.json` backups.
+
+---
+
+## ⚙️ System Architecture
+
+CipherChat uses a decoupled full-stack architecture running inside a unified container:cipher-chat-project/
+[React + Vite Frontend (SPA)]
+│ (REST API & WebSocket / STOMP over /ws)
+▼
+[Spring Boot (v3.2.5) Backend Container]
 │
-├── backend/                            # Java Spring Boot Backend
-│   ├── pom.xml                         # Maven dependencies (WebSocket, Security, JPA, Spatial)
-│   └── src/main/
-│       ├── java/com/cipherchat/
-│       │   ├── CipherChatApplication.java
-│       │   ├── config/
-│       │   │   ├── SecurityConfig.java         # JWT & zero-phone auth filters
-│       │   │   ├── WebSocketConfig.java        # STOMP over WebSocket configuration
-│       │   │   └── CorsConfig.java             # Cross-origin rules for React client
-│       │   ├── controller/
-│       │   │   ├── AuthController.java         # Username/Key-pair registration & login
-│       │   │   ├── ChatController.java         # WebSocket message routing & history API
-│       │   │   ├── FriendController.java       # Add, accept, block, & list friends
-│       │   │   └── DiscoveryController.java    # Neighborhood geospatial radar endpoints
-│       │   ├── model/
-│       │   │   ├── User.java                   # UUID, username, PublicKey, PrivacyFlags, GeoPoint
-│       │   │   ├── Friendship.java             # Requester, Addressee, Status (PENDING/ACCEPTED)
-│       │   │   └── EncryptedMessage.java       # Sender, Receiver, Ciphertext, IV, Timestamp
-│       │   ├── repository/
-│       │   │   ├── UserRepository.java         # Includes PostGIS spatial radius queries
-│       │   │   ├── FriendshipRepository.java
-│       │   │   └── MessageRepository.java      # Paginated chat history queries
-│       │   ├── service/
-│       │   │   ├── AuthService.java            # Token generation & public key storage
-│       │   │   ├── ChatService.java            # Stores ciphertext blobs & triggers push
-│       │   │   ├── FriendService.java          # Manages social graph & privacy permissions
-│       │   │   └── GeoDiscoveryService.java    # Calculates nearby users with fuzzy distance
-│       │   └── dto/
-│       │       ├── AuthRequestDTO.java
-│       │       ├── ChatMessageDTO.java         # Carries encrypted payload + IV
-│       │       └── NearbyUserDTO.java          # Returns username & approximate distance only
-│       └── resources/
-│           └── application.yml                 # DB connection, JWT secret, WebSocket paths
-│
-└── frontend/                           # React + Vite + Tailwind CSS Frontend
-    ├── package.json                    # Node dependencies (sockjs-client, stompjs, lucide-react)
-    ├── vite.config.js                  # Vite bundler config
-    ├── tailwind.config.js              # Utility-first styling setup
-    ├── index.html                      # Entry HTML file
-    └── src/
-        ├── main.jsx                    # React DOM root mount
-        ├── App.jsx                     # Main router & layout wrapper
-        ├── index.css                   # Global CSS & Tailwind imports
-        ├── crypto/                     # Client-Side End-to-End Encryption (E2EE)
-        │   ├── keyManager.js           # Generates ECDH/RSA key-pairs; stores Private Key in IndexedDB
-        │   └── cipherEngine.js         # Encrypts/decrypts messages via AES-GCM before network send
-        ├── services/
-        │   ├── api.js                  # Axios instance with JWT interceptor
-        │   ├── socketService.js        # STOMP WebSocket client connection & subscriptions
-        │   └── geoService.js           # Browser Geolocation API wrapper
-        ├── context/
-        │   ├── AuthContext.jsx         # Holds session state & active cryptographic keys
-        │   └── ChatContext.jsx         # Manages active chat rooms, unread counts, & history
-        ├── components/
-        │   ├── layout/
-        │   │   ├── Sidebar.jsx         # Navigation between Chats, Radar, and Privacy Settings
-        │   │   └── Header.jsx          # Active chat partner status & E2EE verification badge
-        │   ├── chat/
-        │   │   ├── ChatWindow.jsx      # Scrollable message stream (loads persisted history)
-        │   │   ├── MessageBubble.jsx   # Decrypts ciphertext on-the-fly and renders text
-        │   │   └── MessageInput.jsx    # Input bar that encrypts text prior to WebSocket emit
-        │   ├── discovery/
-        │   │   ├── RadarView.jsx       # Interactive UI showing discoverable users in the neighborhood
-        │   │   └── UserCard.jsx        # Displays nearby user profile with "Add Friend" action
-        │   └── privacy/
-        │       └── PrivacyToggle.jsx   # Controls Ghost Mode, Discovery Radius, and Direct Message rules
-        └── pages/
-            ├── AuthPage.jsx            # Zero-phone signup (Username + local Key-Pair generation)
-            ├── DashboardPage.jsx       # Main split-pane chat & discovery workspace
-            └── SettingsPage.jsx        # Key backup/export & privacy configuration
+├─► REST Controllers (Auth, Friends, Channels)
+├─► WebSocket Message Broker (/topic/messages, /topic/presence)
+└─► Embedded H2 Database (File-backed under /data/cipherchat_db)
+## 📂 Project Structure
+
+```text
+Numberless fully - encrypted - based Chat system/
+├── backend/
+│   ├── src/main/java/com/cipherchat/
+│   │   ├── config/          # WebSocket, CORS, and Security configurations
+│   │   ├── controller/      # Auth, Chat, Channel, and Friend REST/WS controllers
+│   │   ├── model/           # JPA Entities (User, Friendship, ChatChannel, EncryptedMessage)
+│   │   └── repository/      # Spring Data JPA Repositories
+│   └── pom.xml              # Maven build configuration
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # ChatWindow, RadarView, and UI layouts
+│   │   ├── crypto/          # WebCrypto AES-256-GCM cipher engine
+│   │   ├── services/        # Axios API and STOMP WebSocket client services
+│   │   ├── App.jsx          # Main application router and state manager
+│   │   └── main.jsx         # React entry point with ErrorBoundary
+│   └── vite.config.js       # Vite build & proxy configurations
+├── Dockerfile               # Multi-stage production container build
+└── README.md                # Project documentation
