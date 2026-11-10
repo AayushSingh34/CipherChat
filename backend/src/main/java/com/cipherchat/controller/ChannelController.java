@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/channels")
 @SuppressWarnings({"rawtypes", "unchecked"})
+@org.springframework.transaction.annotation.Transactional
 public class ChannelController {
     private final ChannelRepository channelRepository;
     private final UserRepository userRepository;

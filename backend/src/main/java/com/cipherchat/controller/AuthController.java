@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
+@org.springframework.transaction.annotation.Transactional
 public class AuthController {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;

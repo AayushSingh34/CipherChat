@@ -8,6 +8,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/discovery")
 @SuppressWarnings({"rawtypes", "unchecked"})
+@org.springframework.transaction.annotation.Transactional
 public class DiscoveryController {
     private final UserRepository userRepository;
     public DiscoveryController(UserRepository userRepository) {

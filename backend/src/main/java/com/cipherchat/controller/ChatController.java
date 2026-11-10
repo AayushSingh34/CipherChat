@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RestController
 @RequestMapping("/api/chat")
 @SuppressWarnings({"rawtypes", "unchecked"})
+@org.springframework.transaction.annotation.Transactional
 public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageRepository messageRepository;

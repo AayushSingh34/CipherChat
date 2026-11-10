@@ -9,6 +9,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/friends")
 @SuppressWarnings({"rawtypes", "unchecked"})
+@org.springframework.transaction.annotation.Transactional
 public class FriendController {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
