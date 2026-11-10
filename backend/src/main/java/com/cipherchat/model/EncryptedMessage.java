@@ -1,34 +1,26 @@
 package com.cipherchat.model;
-
 import jakarta.persistence.*;
-import java.time.Instant;
-
+import java.time.LocalDateTime;
 @Entity
 @Table(name = "encrypted_messages")
 public class EncryptedMessage {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
-
+    @Column(name = "sender_username", nullable = false)
     private String senderUsername;
+    @Column(name = "receiver_username", nullable = false)
     private String receiverUsername;
-
-    @Column(columnDefinition = "CLOB", nullable = false)
-    private String ciphertext; // Encrypted text or base64 file data
-
-    @Column(nullable = false)
+    @Column(name = "ciphertext", columnDefinition = "TEXT", nullable = false)
+    private String ciphertext;
+    @Column(name = "iv", nullable = false)
     private String iv;
-
-    private String messageType; // "TEXT", "IMAGE", "FILE"
+    @Column(name = "message_type")
+    private String messageType = "TEXT";
+    @Column(name = "file_name")
     private String fileName;
-
-    private long timestamp;
-
-    public EncryptedMessage() {
-        this.timestamp = Instant.now().toEpochMilli();
-        this.messageType = "TEXT";
-    }
-
+    @Column(name = "timestamp")
+    private LocalDateTime timestamp;
+    public EncryptedMessage() {}
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getSenderUsername() { return senderUsername; }
@@ -43,6 +35,6 @@ public class EncryptedMessage {
     public void setMessageType(String messageType) { this.messageType = messageType; }
     public String getFileName() { return fileName; }
     public void setFileName(String fileName) { this.fileName = fileName; }
-    public long getTimestamp() { return timestamp; }
-    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 }
