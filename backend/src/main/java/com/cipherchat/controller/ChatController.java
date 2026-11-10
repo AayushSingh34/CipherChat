@@ -46,7 +46,7 @@ public class ChatController {
     @GetMapping("/history")
     public ResponseEntity<?> getHistory(@RequestParam String user1, @RequestParam String user2) {
         try {
-            List<EncryptedMessage> messages = messageRepository.findConversation(user1, user2);
+            List<EncryptedMessage> messages = messageRepository.findBySenderUsernameAndReceiverUsernameOrSenderUsernameAndReceiverUsername(user1, user2, user2, user1);
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
             e.printStackTrace();
