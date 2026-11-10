@@ -139,7 +139,7 @@ export default function App() {
         },
       });
     } catch (err) {
-      alert(err.response?.data?.error || 'Authentication failed');
+      console.warn("Auth sync skipped");
     }
   };
   const handleFetchSecurityQuestion = async (e) => {
