@@ -15,6 +15,10 @@ spring:
       max-lifetime: 180000
       keepalive-time: 60000
       connection-timeout: 20000
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
   jpa:
     hibernate:
       ddl-auto: update
