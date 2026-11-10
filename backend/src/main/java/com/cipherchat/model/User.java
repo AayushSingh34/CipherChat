@@ -14,7 +14,6 @@ public class User {
 
     private String displayName;
 
-    @Lob
     @Column(columnDefinition = "CLOB")
     private String avatar;
 
@@ -24,7 +23,6 @@ public class User {
     private String securityQuestion;
     private String securityAnswer;
 
-    @Lob
     @Column(columnDefinition = "CLOB", nullable = false)
     private String publicKey;
 

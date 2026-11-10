@@ -13,7 +13,6 @@ public class EncryptedMessage {
     private String senderUsername;
     private String receiverUsername;
 
-    @Lob
     @Column(columnDefinition = "CLOB", nullable = false)
     private String ciphertext; // Encrypted text or base64 file data
 

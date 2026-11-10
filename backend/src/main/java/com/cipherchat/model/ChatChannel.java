@@ -14,7 +14,6 @@ public class ChatChannel {
     private String type; // "GROUP" or "COMMUNITY"
     private String description;
     private String createdBy;
-    @Lob
     @Column(columnDefinition = "CLOB")
     private String avatar;
     @Column(columnDefinition = "boolean default false")
