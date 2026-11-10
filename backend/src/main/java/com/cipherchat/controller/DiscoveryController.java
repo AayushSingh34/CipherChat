@@ -58,6 +58,7 @@ public class DiscoveryController {
             @RequestParam(defaultValue = "28.4595") double lat,
             @RequestParam(defaultValue = "77.0266") double lon,
             @RequestParam(defaultValue = "50000") double radiusKm) {
+        ChatController.markOnline(username);
         User me = getOrCreateUser(username.trim());
         me.setLatitude(lat);
         me.setLongitude(lon);

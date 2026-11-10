@@ -103,6 +103,7 @@ public class FriendController {
     }
     @GetMapping("/list")
     public ResponseEntity<?> getFriends(@RequestParam String username) {
+        ChatController.markOnline(username);
         try {
             List relations = friendshipRepository.findAllForUser(username);
             List result = new ArrayList();
