@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import API from '../services/api';
 import { sounds } from '../services/soundEffects';
-import {
-  Compass, Shield, EyeOff, Eye, RefreshCw, UserPlus, Lock, Unlock, Users, Globe, Plus, Hash
-} from 'lucide-react';
+import { Compass, RefreshCw, UserPlus, Globe, Plus, Hash, Users } from 'lucide-react';
 export default function RadarView({ currentUser, onSelectUser, onFriendAction }) {
   const [nearbyUsers, setNearbyUsers] = useState([]);
   const [publicChannels, setPublicChannels] = useState([]);
-  const [discoverable, setDiscoverable] = useState(currentUser?.discoverable ?? true);
-  const [strictPrivacy, setStrictPrivacy] = useState(currentUser?.strictPrivacy ?? false);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [coords, setCoords] = useState({ lat: 28.4595, lon: 77.0266 });
@@ -49,38 +45,6 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
       setLoading(false);
     }
   };
-  const handleToggleGhostMode = async () => {
-    const nextVal = !discoverable;
-    setDiscoverable(nextVal);
-    try {
-      await API.post('/discovery/privacy', {
-        username: currentUser.username,
-        discoverable: nextVal,
-        strictPrivacy,
-      });
-      sounds?.playClick?.();
-      setStatusMsg(nextVal ? 'Visible on Explorer Radar' : 'Ghost Mode ON (Hidden from Radar)');
-      setTimeout(() => setStatusMsg(''), 3000);
-    } catch (err) {
-      console.error('Failed to toggle Ghost Mode:', err);
-    }
-  };
-  const handleToggleStrictDM = async () => {
-    const nextVal = !strictPrivacy;
-    setStrictPrivacy(nextVal);
-    try {
-      await API.post('/discovery/privacy', {
-        username: currentUser.username,
-        discoverable,
-        strictPrivacy: nextVal,
-      });
-      sounds?.playClick?.();
-      setStatusMsg(nextVal ? 'DMs locked to Friends Only' : 'DMs open to Nearby Nodes');
-      setTimeout(() => setStatusMsg(''), 3000);
-    } catch (err) {
-      console.error('Failed to toggle DM mode:', err);
-    }
-  };
   const handleSendFriendRequest = async (targetUser) => {
     try {
       await API.post('/friends/request', {
@@ -116,7 +80,7 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
   };
   return (
     <div className="flex-1 h-full overflow-y-auto bg-slate-950 p-6 space-y-6 text-white">
-      {/* Header & Privacy Controls */}
+      {/* Header with ONLY Scan Now button */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
@@ -129,50 +93,21 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Ghost Mode Button */}
-          <button
-            type="button"
-            onClick={handleToggleGhostMode}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition cursor-pointer ${
-              !discoverable
-                ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            {!discoverable ? <EyeOff size={15} /> : <Eye size={15} />}
-            {!discoverable ? 'Ghost Mode: ON' : 'Ghost Mode: OFF'}
-          </button>
-          {/* Switch DM to Friends Only Button */}
-          <button
-            type="button"
-            onClick={handleToggleStrictDM}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition cursor-pointer ${
-              strictPrivacy
-                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            {strictPrivacy ? <Lock size={15} /> : <Unlock size={15} />}
-            {strictPrivacy ? 'DMs: Friends Only' : 'DMs: Everyone'}
-          </button>
-          {/* Refresh Scan Button */}
-          <button
-            type="button"
-            onClick={() => scanExplorer()}
-            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white flex items-center gap-1.5 transition cursor-pointer"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Scan Now
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => scanExplorer()}
+          className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white flex items-center gap-2 transition cursor-pointer shadow-lg shadow-indigo-600/20"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          Scan Now
+        </button>
       </div>
       {statusMsg && (
         <div className="bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 px-4 py-2.5 rounded-xl text-xs font-medium">
           {statusMsg}
         </div>
       )}
-      {/* Nearby Discoverable Users */}
+      {/* Discoverable Users */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
           <Users size={16} className="text-indigo-400" />
@@ -221,7 +156,7 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
           </div>
         )}
       </div>
-      {/* Discoverable Groups & Open Communities */}
+      {/* Groups & Communities */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
           <Globe size={16} className="text-emerald-400" />
@@ -249,7 +184,6 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
                       <p className="text-sm font-semibold text-white">{ch.name}</p>
                       <p className="text-[11px] text-slate-400">
                         {ch.type} • {ch.members?.length || 1} member(s)
-                        {ch.description ? ` • ${ch.description}` : ''}
                       </p>
                     </div>
                   </div>
@@ -266,7 +200,7 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
                       onClick={() => handleJoinChannel(ch)}
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium text-white flex items-center gap-1"
                     >
-                      <Plus size={13} /> {ch.type === 'GROUP' ? 'Request Join' : 'Join'}
+                      <Plus size={13} /> Join
                     </button>
                   )}
                 </div>
