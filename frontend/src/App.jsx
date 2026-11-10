@@ -292,7 +292,7 @@ export default function App() {
       discoverable: field === 'discoverable' ? !user.discoverable : user.discoverable,
       strictPrivacy: field === 'strictPrivacy' ? !user.strictPrivacy : user.strictPrivacy,
     };
-    const res = await API.put('/auth/privacy', updated);
+    const res = await API.put('/discovery/privacy', updated);
     setUser(res.data);
   };
   if (!user) {

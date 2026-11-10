@@ -15,11 +15,11 @@ public class DiscoveryController {
     }
     @PostMapping("/update-location")
     public ResponseEntity<?> updateLocation(@RequestBody Map req) {
-        String username = String.valueOf(req.get("username"));
+        String username = String.valueOf(req.get("username")).trim();
         Double lat = req.get("latitude") != null ? Double.valueOf(String.valueOf(req.get("latitude"))) : 28.4595;
         Double lon = req.get("longitude") != null ? Double.valueOf(String.valueOf(req.get("longitude"))) : 77.0266;
         Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Please log out and register again"));
         User u = opt.get();
         u.setLatitude(lat);
         u.setLongitude(lon);
@@ -32,15 +32,16 @@ public class DiscoveryController {
         userRepository.save(u);
         return ResponseEntity.ok(Map.of(
             "status", "UPDATED",
+            "username", u.getUsername(),
             "discoverable", u.isDiscoverable(),
             "strictPrivacy", u.isStrictPrivacy()
         ));
     }
     @PostMapping("/privacy")
     public ResponseEntity<?> updatePrivacy(@RequestBody Map req) {
-        String username = String.valueOf(req.get("username"));
+        String username = String.valueOf(req.get("username")).trim();
         Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Please log out and register again"));
         User u = opt.get();
         if (req.containsKey("discoverable")) {
             u.setDiscoverable(Boolean.parseBoolean(String.valueOf(req.get("discoverable"))));
@@ -50,6 +51,7 @@ public class DiscoveryController {
         }
         userRepository.save(u);
         return ResponseEntity.ok(Map.of(
+            "status", "UPDATED",
             "username", u.getUsername(),
             "discoverable", u.isDiscoverable(),
             "strictPrivacy", u.isStrictPrivacy()
@@ -62,17 +64,15 @@ public class DiscoveryController {
             @RequestParam(defaultValue = "77.0266") double lon,
             @RequestParam(defaultValue = "50000") double radiusKm) {
         userRepository.findByUsername(username).ifPresent(me -> {
-            if (me.getLatitude() == null || me.getLongitude() == null || (lat != 28.4595 && lon != 77.0266)) {
-                me.setLatitude(lat);
-                me.setLongitude(lon);
-                userRepository.save(me);
-            }
+            me.setLatitude(lat);
+            me.setLongitude(lon);
+            userRepository.save(me);
         });
         List<User> allUsers = userRepository.findAll();
         List<NearbyUserDTO> nearby = new ArrayList<>();
         for (User u : allUsers) {
             if (u.getUsername().equalsIgnoreCase(username)) continue;
-            if (!u.isDiscoverable()) continue; // Respect Ghost Mode!
+            if (!u.isDiscoverable()) continue;
             double uLat = u.getLatitude() != null ? u.getLatitude() : 28.4595;
             double uLon = u.getLongitude() != null ? u.getLongitude() : 77.0266;
             double dist = calculateDistanceKm(lat, lon, uLat, uLon);
