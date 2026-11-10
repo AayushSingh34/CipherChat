@@ -4,54 +4,97 @@ import com.cipherchat.model.User;
 import com.cipherchat.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 @RestController
 @RequestMapping("/api/discovery")
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class DiscoveryController {
     private final UserRepository userRepository;
     public DiscoveryController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
-    @PostMapping("/location")
-    public ResponseEntity<?> updateLocation(@RequestBody Map<String, Object> req) {
-        String username = (String) req.get("username");
-        Double lat = ((Number) req.get("latitude")).doubleValue();
-        Double lon = ((Number) req.get("longitude")).doubleValue();
-        User user = userRepository.findByUsername(username).orElseThrow();
-        user.setLatitude(lat);
-        user.setLongitude(lon);
-        userRepository.save(user);
-        return ResponseEntity.ok(Map.of("status", "Location updated"));
+    @PostMapping("/update-location")
+    public ResponseEntity<?> updateLocation(@RequestBody Map req) {
+        String username = String.valueOf(req.get("username"));
+        Double lat = req.get("latitude") != null ? Double.valueOf(String.valueOf(req.get("latitude"))) : 28.4595;
+        Double lon = req.get("longitude") != null ? Double.valueOf(String.valueOf(req.get("longitude"))) : 77.0266;
+        Optional<User> opt = userRepository.findByUsername(username);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        User u = opt.get();
+        u.setLatitude(lat);
+        u.setLongitude(lon);
+        if (req.containsKey("discoverable")) {
+            u.setDiscoverable(Boolean.parseBoolean(String.valueOf(req.get("discoverable"))));
+        }
+        if (req.containsKey("strictPrivacy")) {
+            u.setStrictPrivacy(Boolean.parseBoolean(String.valueOf(req.get("strictPrivacy"))));
+        }
+        userRepository.save(u);
+        return ResponseEntity.ok(Map.of(
+            "status", "UPDATED",
+            "discoverable", u.isDiscoverable(),
+            "strictPrivacy", u.isStrictPrivacy()
+        ));
+    }
+    @PostMapping("/privacy")
+    public ResponseEntity<?> updatePrivacy(@RequestBody Map req) {
+        String username = String.valueOf(req.get("username"));
+        Optional<User> opt = userRepository.findByUsername(username);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        User u = opt.get();
+        if (req.containsKey("discoverable")) {
+            u.setDiscoverable(Boolean.parseBoolean(String.valueOf(req.get("discoverable"))));
+        }
+        if (req.containsKey("strictPrivacy")) {
+            u.setStrictPrivacy(Boolean.parseBoolean(String.valueOf(req.get("strictPrivacy"))));
+        }
+        userRepository.save(u);
+        return ResponseEntity.ok(Map.of(
+            "username", u.getUsername(),
+            "discoverable", u.isDiscoverable(),
+            "strictPrivacy", u.isStrictPrivacy()
+        ));
     }
     @GetMapping("/nearby")
     public ResponseEntity<List<NearbyUserDTO>> getNearbyUsers(
             @RequestParam String username,
-            @RequestParam(defaultValue = "10.0") double radiusKm) {
-        User current = userRepository.findByUsername(username).orElseThrow();
-        if (current.getLatitude() == null || current.getLongitude() == null) {
-            return ResponseEntity.ok(List.of());
+            @RequestParam(defaultValue = "28.4595") double lat,
+            @RequestParam(defaultValue = "77.0266") double lon,
+            @RequestParam(defaultValue = "50000") double radiusKm) {
+        userRepository.findByUsername(username).ifPresent(me -> {
+            if (me.getLatitude() == null || me.getLongitude() == null || (lat != 28.4595 && lon != 77.0266)) {
+                me.setLatitude(lat);
+                me.setLongitude(lon);
+                userRepository.save(me);
+            }
+        });
+        List<User> allUsers = userRepository.findAll();
+        List<NearbyUserDTO> nearby = new ArrayList<>();
+        for (User u : allUsers) {
+            if (u.getUsername().equalsIgnoreCase(username)) continue;
+            if (!u.isDiscoverable()) continue; // Respect Ghost Mode!
+            double uLat = u.getLatitude() != null ? u.getLatitude() : 28.4595;
+            double uLon = u.getLongitude() != null ? u.getLongitude() : 77.0266;
+            double dist = calculateDistanceKm(lat, lon, uLat, uLon);
+            NearbyUserDTO dto = new NearbyUserDTO(
+                u.getUsername(),
+                u.getDisplayName() != null ? u.getDisplayName() : u.getUsername(),
+                u.getPublicKey(),
+                Math.round(dist * 10.0) / 10.0,
+                u.isStrictPrivacy()
+            );
+            nearby.add(dto);
         }
-        List<NearbyUserDTO> nearby = userRepository.findAll().stream()
-                .filter(u -> !u.getUsername().equals(username))
-                .filter(User::isDiscoverable)
-                .filter(u -> u.getLatitude() != null && u.getLongitude() != null)
-                .map(u -> {
-                    double dist = haversine(current.getLatitude(), current.getLongitude(), u.getLatitude(), u.getLongitude());
-                    return new NearbyUserDTO(u.getUsername(), u.getPublicKey(), dist, u.isStrictPrivacy());
-                })
-                .filter(dto -> dto.getDistanceKm() <= radiusKm)
-                .collect(Collectors.toList());
         return ResponseEntity.ok(nearby);
     }
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
+    private double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
         final int R = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }

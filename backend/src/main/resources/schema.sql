@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     security_answer VARCHAR(255),
     discoverable BOOLEAN DEFAULT TRUE,
     strict_privacy BOOLEAN DEFAULT FALSE,
-    latitude DOUBLE PRECISION DEFAULT 0.0,
-    longitude DOUBLE PRECISION DEFAULT 0.0
+    latitude DOUBLE PRECISION DEFAULT 28.4595,
+    longitude DOUBLE PRECISION DEFAULT 77.0266
 );
 CREATE TABLE IF NOT EXISTS friendships (
     id VARCHAR(255) PRIMARY KEY,
@@ -28,4 +28,25 @@ CREATE TABLE IF NOT EXISTS encrypted_messages (
     message_type VARCHAR(255) DEFAULT 'TEXT',
     file_name VARCHAR(255),
     timestamp TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS chat_channels (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    description VARCHAR(1000),
+    created_by VARCHAR(255),
+    avatar TEXT,
+    is_private BOOLEAN DEFAULT FALSE
+);
+CREATE TABLE IF NOT EXISTS chat_channel_members (
+    chat_channel_id VARCHAR(255) NOT NULL,
+    members VARCHAR(255)
+);
+CREATE TABLE IF NOT EXISTS chat_channel_pending_requests (
+    chat_channel_id VARCHAR(255) NOT NULL,
+    pending_requests VARCHAR(255)
+);
+CREATE TABLE IF NOT EXISTS chat_channel_blocked_users (
+    chat_channel_id VARCHAR(255) NOT NULL,
+    blocked_users VARCHAR(255)
 );

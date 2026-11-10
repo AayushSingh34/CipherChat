@@ -1,92 +1,279 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API from '../services/api';
-import { Compass, UserPlus, CheckCircle, Clock, MapPin } from 'lucide-react';
-export default function RadarView({ currentUser, friendsMap = {}, onFriendAdded }) {
-  const [nearby, setNearby] = useState([]);
+import { sounds } from '../services/soundEffects';
+import {
+  Compass, Shield, EyeOff, Eye, RefreshCw, UserPlus, Lock, Unlock, Users, Globe, Plus, Hash
+} from 'lucide-react';
+export default function RadarView({ currentUser, onSelectUser, onFriendAction }) {
+  const [nearbyUsers, setNearbyUsers] = useState([]);
+  const [publicChannels, setPublicChannels] = useState([]);
+  const [discoverable, setDiscoverable] = useState(currentUser?.discoverable ?? true);
+  const [strictPrivacy, setStrictPrivacy] = useState(currentUser?.strictPrivacy ?? false);
   const [loading, setLoading] = useState(false);
-  const scanNearby = () => {
-    setLoading(true);
-    const doScan = async (lat, lon) => {
-      try {
-        await API.post('/discovery/location', { username: currentUser.username, latitude: lat, longitude: lon });
-        const res = await API.get('/discovery/nearby', { params: { username: currentUser.username, radiusKm: 50 } });
-        setNearby(res.data || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [statusMsg, setStatusMsg] = useState('');
+  const [coords, setCoords] = useState({ lat: 28.4595, lon: 77.0266 });
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => doScan(pos.coords.latitude, pos.coords.longitude),
-        () => doScan(28.6139, 77.2090)
+        (pos) => {
+          const newCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          setCoords(newCoords);
+          scanExplorer(newCoords.lat, newCoords.lon);
+        },
+        () => {
+          scanExplorer(28.4595, 77.0266);
+        },
+        { timeout: 4000 }
       );
     } else {
-      doScan(28.6139, 77.2090);
+      scanExplorer(28.4595, 77.0266);
+    }
+  }, []);
+  const scanExplorer = async (lat = coords.lat, lon = coords.lon) => {
+    if (!currentUser?.username) return;
+    setLoading(true);
+    try {
+      const [nearbyRes, chRes] = await Promise.all([
+        API.get('/discovery/nearby', {
+          params: { username: currentUser.username, lat, lon, radiusKm: 50000 },
+        }),
+        API.get('/channels/discover', {
+          params: { username: currentUser.username },
+        }),
+      ]);
+      setNearbyUsers(nearbyRes.data || []);
+      setPublicChannels(chRes.data || []);
+    } catch (err) {
+      console.error('Explorer scan failed:', err);
+    } finally {
+      setLoading(false);
     }
   };
-  const sendReq = async (target) => {
+  const handleToggleGhostMode = async () => {
+    const nextVal = !discoverable;
+    setDiscoverable(nextVal);
     try {
-      await API.post('/friends/request', { requester: currentUser.username, addressee: target });
-      onFriendAdded?.();
+      await API.post('/discovery/privacy', {
+        username: currentUser.username,
+        discoverable: nextVal,
+        strictPrivacy,
+      });
+      sounds?.playClick?.();
+      setStatusMsg(nextVal ? 'Visible on Explorer Radar' : 'Ghost Mode ON (Hidden from Radar)');
+      setTimeout(() => setStatusMsg(''), 3000);
     } catch (err) {
-      alert(err.response?.data?.error || 'Could not send request');
+      console.error('Failed to toggle Ghost Mode:', err);
+    }
+  };
+  const handleToggleStrictDM = async () => {
+    const nextVal = !strictPrivacy;
+    setStrictPrivacy(nextVal);
+    try {
+      await API.post('/discovery/privacy', {
+        username: currentUser.username,
+        discoverable,
+        strictPrivacy: nextVal,
+      });
+      sounds?.playClick?.();
+      setStatusMsg(nextVal ? 'DMs locked to Friends Only' : 'DMs open to Nearby Nodes');
+      setTimeout(() => setStatusMsg(''), 3000);
+    } catch (err) {
+      console.error('Failed to toggle DM mode:', err);
+    }
+  };
+  const handleSendFriendRequest = async (targetUser) => {
+    try {
+      await API.post('/friends/request', {
+        requester: currentUser.username,
+        addressee: targetUser,
+      });
+      sounds?.playAccept?.();
+      setStatusMsg(`Friend request sent to @${targetUser}!`);
+      onFriendAction?.();
+      setTimeout(() => setStatusMsg(''), 3000);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not send friend request');
+    }
+  };
+  const handleJoinChannel = async (ch) => {
+    try {
+      const res = await API.post('/channels/join', {
+        channelId: ch.id,
+        username: currentUser.username,
+      });
+      sounds?.playAccept?.();
+      if (res.data?.status === 'PENDING') {
+        setStatusMsg(`Join request sent to #${ch.name} (Waiting for Admin approval)`);
+      } else {
+        setStatusMsg(`Joined #${ch.name}!`);
+      }
+      onFriendAction?.();
+      scanExplorer();
+      setTimeout(() => setStatusMsg(''), 3000);
+    } catch {
+      alert('Failed to join channel');
     }
   };
   return (
-    <div className="flex-1 p-6 bg-slate-950 text-white overflow-y-auto space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div>
-          <h2 className="text-lg font-bold flex items-center gap-2 text-emerald-400">
-            <Compass size={22} /> Neighborhood Radar
-          </h2>
-          <p className="text-xs text-slate-400">Discover nearby encrypted nodes without sharing phone numbers.</p>
+    <div className="flex-1 h-full overflow-y-auto bg-slate-950 p-6 space-y-6 text-white">
+      {/* Header & Privacy Controls */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+            <Compass size={26} className={loading ? 'animate-spin' : ''} />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">Encrypted Node Explorer</h2>
+            <p className="text-xs text-slate-400">
+              Discover active users, groups & communities without sharing phone numbers
+            </p>
+          </div>
         </div>
-        <button
-          onClick={scanNearby}
-          disabled={loading}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-semibold text-white transition"
-        >
-          {loading ? 'Scanning...' : 'Scan Radar'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Ghost Mode Button */}
+          <button
+            type="button"
+            onClick={handleToggleGhostMode}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition cursor-pointer ${
+              !discoverable
+                ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            {!discoverable ? <EyeOff size={15} /> : <Eye size={15} />}
+            {!discoverable ? 'Ghost Mode: ON' : 'Ghost Mode: OFF'}
+          </button>
+          {/* Switch DM to Friends Only Button */}
+          <button
+            type="button"
+            onClick={handleToggleStrictDM}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition cursor-pointer ${
+              strictPrivacy
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            {strictPrivacy ? <Lock size={15} /> : <Unlock size={15} />}
+            {strictPrivacy ? 'DMs: Friends Only' : 'DMs: Everyone'}
+          </button>
+          {/* Refresh Scan Button */}
+          <button
+            type="button"
+            onClick={() => scanExplorer()}
+            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Scan Now
+          </button>
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {nearby.map((u) => {
-          const rel = friendsMap[u.username];
-          const status = rel ? rel.status : 'NONE';
-          return (
-            <div key={u.username} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold uppercase">
-                  {u.username.charAt(0)}
+      {statusMsg && (
+        <div className="bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 px-4 py-2.5 rounded-xl text-xs font-medium">
+          {statusMsg}
+        </div>
+      )}
+      {/* Nearby Discoverable Users */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <Users size={16} className="text-indigo-400" />
+          Discoverable Users ({nearbyUsers.length})
+        </h3>
+        {nearbyUsers.length === 0 ? (
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
+            No other visible users right now. Ask a friend to register or turn off Ghost Mode!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {nearbyUsers.map((u) => (
+              <div
+                key={u.username}
+                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-500/50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300 uppercase">
+                    {u.username.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">@{u.username}</p>
+                    <p className="text-[11px] text-slate-400">
+                      {u.distanceKm} km away • {u.strictPrivacy ? '🔒 Friends-Only DM' : '🌐 Open DM'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">@{u.username}</p>
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <MapPin size={11} className="text-emerald-400" /> {u.distanceKm?.toFixed(1) || '0.5'} km away
-                  </p>
+                <div className="flex items-center gap-2">
+                  {!u.strictPrivacy && onSelectUser && (
+                    <button
+                      onClick={() => onSelectUser(u)}
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-indigo-300"
+                    >
+                      Chat
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleSendFriendRequest(u.username)}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white flex items-center gap-1"
+                  >
+                    <UserPlus size={13} /> Add
+                  </button>
                 </div>
               </div>
-              {status === 'ACCEPTED' ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
-                  <CheckCircle size={14} /> Already Friend
-                </span>
-              ) : status === 'PENDING' ? (
-                <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
-                  <Clock size={14} /> Pending
-                </span>
-              ) : (
-                <button
-                  onClick={() => sendReq(u.username)}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium flex items-center gap-1"
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Discoverable Groups & Open Communities */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <Globe size={16} className="text-emerald-400" />
+          Groups & Open Communities ({publicChannels.length})
+        </h3>
+        {publicChannels.length === 0 ? (
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
+            No groups or communities created yet. Create one from the left sidebar!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {publicChannels.map((ch) => {
+              const isMember = ch.members?.includes(currentUser.username);
+              const isPending = ch.pendingRequests?.includes(currentUser.username);
+              return (
+                <div
+                  key={ch.id}
+                  className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between"
                 >
-                  <UserPlus size={14} /> Add Friend
-                </button>
-              )}
-            </div>
-          );
-        })}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                      <Hash size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{ch.name}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {ch.type} • {ch.members?.length || 1} member(s)
+                        {ch.description ? ` • ${ch.description}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  {isMember ? (
+                    <span className="px-3 py-1 bg-slate-800 text-emerald-400 rounded-lg text-xs font-medium">
+                      Joined
+                    </span>
+                  ) : isPending ? (
+                    <span className="px-3 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-xs font-medium">
+                      Pending
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleJoinChannel(ch)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium text-white flex items-center gap-1"
+                    >
+                      <Plus size={13} /> {ch.type === 'GROUP' ? 'Request Join' : 'Join'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
