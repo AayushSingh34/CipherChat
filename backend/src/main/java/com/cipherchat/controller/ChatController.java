@@ -93,6 +93,7 @@ public class ChatController {
         if (username != null) markOnline(username);
         return ResponseEntity.ok(getActiveUserList());
     }
+    public static Set<String> getOnlineSet() { long cutoff = System.currentTimeMillis() - 120000; onlineUsers.entrySet().removeIf(e -> e.getValue() < cutoff); return onlineUsers.keySet(); }
     private Set<String> getActiveUserList() {
         long cutoff = System.currentTimeMillis() - 60000; // Active in last 60s
         onlineUsers.entrySet().removeIf(e -> e.getValue() < cutoff);

@@ -105,7 +105,7 @@ export default function App() {
       setEditDisplayName(res.data.displayName || res.data.username);
       setAvatarPreview(res.data.avatar || '');
       setEditSecurityQ(res.data.securityQuestion || '');
-      const initialOnline = await API.get('/chat/presence/online');
+      const initialOnline = await API.get('/chat/presence/online', { params: { username: currentUser?.username } });
       setOnlineUsers(new Set(initialOnline.data));
       connectSocket(res.data.username, {
         onMessageReceived: (incomingMsg) => {

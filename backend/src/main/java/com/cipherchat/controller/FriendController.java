@@ -4,12 +4,13 @@ import com.cipherchat.repository.FriendshipRepository;
 import com.cipherchat.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController
 @RequestMapping("/api/friends")
+@Transactional
 @SuppressWarnings({"rawtypes", "unchecked"})
-@org.springframework.transaction.annotation.Transactional
 public class FriendController {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
@@ -26,6 +27,7 @@ public class FriendController {
         try {
             String from = String.valueOf(req.get("requester")).trim();
             String to = String.valueOf(req.get("addressee")).trim();
+            ChatController.markOnline(from);
             if (from.equalsIgnoreCase(to)) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Cannot add yourself"));
             }
@@ -46,8 +48,10 @@ public class FriendController {
             notifyPayload.put("requester", from);
             notifyPayload.put("addressee", to);
             notifyPayload.put("friendshipId", saved.getId());
-            messagingTemplate.convertAndSend("/topic/notifications/" + to, notifyPayload);
-            messagingTemplate.convertAndSend("/topic/notifications/" + from, notifyPayload);
+            try {
+                messagingTemplate.convertAndSend("/topic/notifications/" + to, notifyPayload);
+                messagingTemplate.convertAndSend("/topic/notifications/" + from, notifyPayload);
+            } catch (Exception ignored) {}
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             e.printStackTrace();
@@ -61,6 +65,7 @@ public class FriendController {
             String action = req.get("action") != null ? String.valueOf(req.get("action")).trim() : "";
             String currentUsername = req.get("username") != null ? String.valueOf(req.get("username")).trim() : "";
             String targetUsername = req.get("targetUsername") != null ? String.valueOf(req.get("targetUsername")).trim() : "";
+            ChatController.markOnline(currentUsername);
             Optional<Friendship> opt = Optional.empty();
             if (!friendshipId.isEmpty() && !"null".equalsIgnoreCase(friendshipId) && !"undefined".equalsIgnoreCase(friendshipId)) {
                 opt = friendshipRepository.findById(friendshipId);
@@ -93,8 +98,10 @@ public class FriendController {
             Map payload = new HashMap();
             payload.put("type", "FRIEND_" + action.toUpperCase());
             payload.put("partner", currentUsername);
-            messagingTemplate.convertAndSend("/topic/notifications/" + reqUser, payload);
-            messagingTemplate.convertAndSend("/topic/notifications/" + addUser, payload);
+            try {
+                messagingTemplate.convertAndSend("/topic/notifications/" + reqUser, payload);
+                messagingTemplate.convertAndSend("/topic/notifications/" + addUser, payload);
+            } catch (Exception ignored) {}
             return ResponseEntity.ok(Map.of("status", "SUCCESS"));
         } catch (Exception e) {
             e.printStackTrace();
@@ -103,13 +110,14 @@ public class FriendController {
     }
     @GetMapping("/list")
     public ResponseEntity<?> getFriends(@RequestParam String username) {
-        ChatController.markOnline(username);
         try {
-            List relations = friendshipRepository.findAllForUser(username);
+            ChatController.markOnline(username);
+            Set<String> activeUsers = ChatController.getOnlineSet();
+            List relations = friendshipRepository.findAllForUser(username.trim());
             List result = new ArrayList();
             for (Object obj : relations) {
                 Friendship f = (Friendship) obj;
-                String partnerName = f.getRequesterUsername().equalsIgnoreCase(username)
+                String partnerName = f.getRequesterUsername().equalsIgnoreCase(username.trim())
                         ? f.getAddresseeUsername()
                         : f.getRequesterUsername();
                 userRepository.findByUsername(partnerName).ifPresent(partner -> {
@@ -120,7 +128,8 @@ public class FriendController {
                     item.put("avatar", partner.getAvatar());
                     item.put("publicKey", partner.getPublicKey());
                     item.put("status", f.getStatus());
-                    item.put("isRequester", f.getRequesterUsername().equalsIgnoreCase(username));
+                    item.put("online", activeUsers.contains(partner.getUsername()));
+                    item.put("isRequester", f.getRequesterUsername().equalsIgnoreCase(username.trim()));
                     item.put("blockedBy", f.getBlockedBy());
                     result.add(item);
                 });

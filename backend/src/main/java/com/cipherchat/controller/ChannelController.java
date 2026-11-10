@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 @RestController
+@org.springframework.transaction.annotation.Transactional
 @RequestMapping("/api/channels")
 @SuppressWarnings({"rawtypes", "unchecked"})
 @org.springframework.transaction.annotation.Transactional

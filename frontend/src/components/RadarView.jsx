@@ -9,6 +9,7 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
   const [statusMsg, setStatusMsg] = useState('');
   const [coords, setCoords] = useState({ lat: 28.4595, lon: 77.0266 });
   useEffect(() => {
+    scanExplorer(28.4595, 77.0266);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -16,34 +17,31 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
           setCoords(newCoords);
           scanExplorer(newCoords.lat, newCoords.lon);
         },
-        () => {
-          scanExplorer(28.4595, 77.0266);
-        },
+        () => {},
         { timeout: 4000 }
       );
-    } else {
-      scanExplorer(28.4595, 77.0266);
     }
-  }, []);
+  }, [currentUser?.username]);
   const scanExplorer = async (lat = coords.lat, lon = coords.lon) => {
     if (!currentUser?.username) return;
     setLoading(true);
     try {
-      const [nearbyRes, chRes] = await Promise.all([
-        API.get('/discovery/nearby', {
-          params: { username: currentUser.username, lat, lon, radiusKm: 50000 },
-        }),
-        API.get('/channels/discover', {
-          params: { username: currentUser.username },
-        }),
-      ]);
-      setNearbyUsers(nearbyRes.data || []);
-      setPublicChannels(chRes.data || []);
+      const nearbyRes = await API.get('/discovery/nearby', {
+        params: { username: currentUser.username, lat, lon, radiusKm: 50000 },
+      });
+      setNearbyUsers(Array.isArray(nearbyRes.data) ? nearbyRes.data : []);
     } catch (err) {
-      console.error('Explorer scan failed:', err);
-    } finally {
-      setLoading(false);
+      console.error('Nearby users scan error:', err);
     }
+    try {
+      const chRes = await API.get('/channels/discover', {
+        params: { username: currentUser.username },
+      });
+      setPublicChannels(Array.isArray(chRes.data) ? chRes.data : []);
+    } catch (err) {
+      console.error('Channels scan error:', err);
+    }
+    setLoading(false);
   };
   const handleSendFriendRequest = async (targetUser) => {
     try {
@@ -80,7 +78,6 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
   };
   return (
     <div className="flex-1 h-full overflow-y-auto bg-slate-950 p-6 space-y-6 text-white">
-      {/* Header with ONLY Scan Now button */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
@@ -107,7 +104,6 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
           {statusMsg}
         </div>
       )}
-      {/* Discoverable Users */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
           <Users size={16} className="text-indigo-400" />
@@ -139,14 +135,14 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
                   {!u.strictPrivacy && onSelectUser && (
                     <button
                       onClick={() => onSelectUser(u)}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-indigo-300"
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-indigo-300 cursor-pointer"
                     >
                       Chat
                     </button>
                   )}
                   <button
                     onClick={() => handleSendFriendRequest(u.username)}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white flex items-center gap-1"
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white flex items-center gap-1 cursor-pointer"
                   >
                     <UserPlus size={13} /> Add
                   </button>
@@ -156,7 +152,6 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
           </div>
         )}
       </div>
-      {/* Groups & Communities */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
           <Globe size={16} className="text-emerald-400" />
@@ -198,7 +193,7 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
                   ) : (
                     <button
                       onClick={() => handleJoinChannel(ch)}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium text-white flex items-center gap-1"
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium text-white flex items-center gap-1 cursor-pointer"
                     >
                       <Plus size={13} /> Join
                     </button>
