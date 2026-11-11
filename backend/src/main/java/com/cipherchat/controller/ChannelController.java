@@ -145,4 +145,26 @@ public class ChannelController {
         }
         return ResponseEntity.ok(channelRepository.save(ch));
     }
+    @PostMapping("/delete")
+    public ResponseEntity<?> deleteChannelPost(@RequestBody Map<String, Object> req) {
+        String channelId = String.valueOf(req.get("channelId"));
+        String username = String.valueOf(req.get("username")).trim();
+        return performDeleteChannel(channelId, username);
+    }
+    @DeleteMapping("/{channelId}")
+    public ResponseEntity<?> deleteChannel(@PathVariable String channelId, @RequestParam String username) {
+        return performDeleteChannel(channelId, username.trim());
+    }
+    private ResponseEntity<?> performDeleteChannel(String channelId, String username) {
+        Optional<ChatChannel> opt = channelRepository.findById(channelId);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "Group or Community not found"));
+        }
+        ChatChannel ch = opt.get();
+        if (ch.getAdminUsername() != null && !ch.getAdminUsername().equalsIgnoreCase(username)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Only the group/community admin can delete it"));
+        }
+        channelRepository.delete(ch);
+        return ResponseEntity.ok(Map.of("status", "DELETED", "channelId", channelId));
+    }
 }

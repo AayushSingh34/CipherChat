@@ -128,7 +128,7 @@ public class FriendController {
                     item.put("avatar", partner.getAvatar());
                     item.put("publicKey", partner.getPublicKey());
                     item.put("status", f.getStatus());
-                    item.put("online", activeUsers.contains(partner.getUsername()));
+                    item.put("online", ChatController.isUserOnline(partner.getUsername()));
                     item.put("isRequester", f.getRequesterUsername().equalsIgnoreCase(username.trim()));
                     item.put("blockedBy", f.getBlockedBy());
                     result.add(item);

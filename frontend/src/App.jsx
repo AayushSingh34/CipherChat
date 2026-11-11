@@ -81,7 +81,19 @@ export default function App() {
     localStorage.setItem('cipherchat_theme', JSON.stringify(newThemeObj));
   };
   const activeChatRef = useRef(null);
-  useEffect(() => {
+      useEffect(() => {
+      if (!user?.username) return;
+      const interval = setInterval(async () => {
+        try {
+          const res = await API.get('/chat/presence/online', { params: { username: user.username } });
+          if (Array.isArray(res.data)) {
+            setOnlineUsers(new Set(res.data));
+          }
+        } catch (e) {}
+      }, 3000);
+      return () => clearInterval(interval);
+    }, [user?.username]);
+    useEffect(() => {
     activeChatRef.current = activeChat;
   }, [activeChat]);
   const handleSetSidebarMode = (mode) => {
@@ -188,7 +200,19 @@ export default function App() {
       console.error(e);
     }
   };
-  useEffect(() => {
+      useEffect(() => {
+      if (!user?.username) return;
+      const interval = setInterval(async () => {
+        try {
+          const res = await API.get('/chat/presence/online', { params: { username: user.username } });
+          if (Array.isArray(res.data)) {
+            setOnlineUsers(new Set(res.data));
+          }
+        } catch (e) {}
+      }, 3000);
+      return () => clearInterval(interval);
+    }, [user?.username]);
+    useEffect(() => {
     fetchSocialData();
   }, [user, incomingTrigger]);
   const selectChat = (item, isChannel = false) => {
@@ -641,7 +665,7 @@ export default function App() {
               </div>
             ) : chatSection === 'personal' ? (
               friends.accepted?.map((f) => {
-                const isOnline = onlineUsers.has(f.username);
+                const isOnline = Array.from(onlineUsers).some(u => u.toLowerCase() === String(f.username).toLowerCase());
                 const isSelected = activeChat?.username === f.username && !activeChat?.isChannel;
                 return (
                   <div

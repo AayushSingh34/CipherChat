@@ -28,9 +28,10 @@ public class DiscoveryController {
             return userRepository.save(u);
         });
     }
-    @PostMapping({"/update-location", "/privacy"})
+    @RequestMapping(value = {"/update-location", "/privacy"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> updateLocationOrPrivacy(@RequestBody Map req) {
         String username = String.valueOf(req.get("username")).trim();
+        ChatController.markOnline(username);
         User u = getOrCreateUser(username);
         if (req.get("latitude") != null) {
             u.setLatitude(Double.valueOf(String.valueOf(req.get("latitude"))));
@@ -45,12 +46,7 @@ public class DiscoveryController {
             u.setStrictPrivacy(Boolean.parseBoolean(String.valueOf(req.get("strictPrivacy"))));
         }
         User saved = userRepository.save(u);
-        return ResponseEntity.ok(Map.of(
-            "status", "UPDATED",
-            "username", saved.getUsername(),
-            "discoverable", saved.isDiscoverable(),
-            "strictPrivacy", saved.isStrictPrivacy()
-        ));
+        return ResponseEntity.ok(saved);
     }
     @GetMapping("/nearby")
     public ResponseEntity<List<NearbyUserDTO>> getNearbyUsers(

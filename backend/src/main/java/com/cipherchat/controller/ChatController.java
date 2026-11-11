@@ -23,14 +23,28 @@ public class ChatController {
         this.messagingTemplate = messagingTemplate;
     }
     public static void markOnline(String username) {
-        if (username != null && !username.isBlank()) {
+        if (username != null && !username.isBlank() && !"null".equalsIgnoreCase(username) && !"undefined".equalsIgnoreCase(username)) {
             onlineUsers.put(username.trim(), System.currentTimeMillis());
         }
     }
+    public static boolean isUserOnline(String username) {
+        if (username == null) return false;
+        long cutoff = System.currentTimeMillis() - 120000;
+        onlineUsers.entrySet().removeIf(e -> e.getValue() < cutoff);
+        return onlineUsers.keySet().stream().anyMatch(u -> u.equalsIgnoreCase(username.trim()));
+    }
+    public static Set<String> getOnlineSet() {
+        long cutoff = System.currentTimeMillis() - 120000;
+        onlineUsers.entrySet().removeIf(e -> e.getValue() < cutoff);
+        return new HashSet<>(onlineUsers.keySet());
+    }
     private EncryptedMessage saveAndBroadcast(Map payload) {
-        String sender = String.valueOf(payload.get("senderUsername")).trim();
-        String receiver = String.valueOf(payload.get("receiverUsername")).trim();
-        String ciphertext = String.valueOf(payload.get("ciphertext"));
+        String sender = payload.get("senderUsername") != null ? String.valueOf(payload.get("senderUsername")).trim()
+                      : String.valueOf(payload.getOrDefault("sender", "")).trim();
+        String receiver = payload.get("receiverUsername") != null ? String.valueOf(payload.get("receiverUsername")).trim()
+                        : String.valueOf(payload.getOrDefault("receiver", "")).trim();
+        String ciphertext = payload.get("ciphertext") != null ? String.valueOf(payload.get("ciphertext"))
+                          : String.valueOf(payload.getOrDefault("content", ""));
         String iv = payload.get("iv") != null ? String.valueOf(payload.get("iv")) : "PLAIN";
         String messageType = payload.get("messageType") != null ? String.valueOf(payload.get("messageType")) : "TEXT";
         String fileName = payload.get("fileName") != null ? String.valueOf(payload.get("fileName")) : null;
@@ -84,19 +98,14 @@ public class ChatController {
     }
     @PostMapping("/presence/heartbeat")
     public ResponseEntity<?> heartbeat(@RequestBody Map req) {
-        String username = String.valueOf(req.get("username")).trim();
-        markOnline(username);
-        return ResponseEntity.ok(Map.of("status", "ONLINE", "onlineUsers", getActiveUserList()));
+        if (req.get("username") != null) {
+            markOnline(String.valueOf(req.get("username")));
+        }
+        return ResponseEntity.ok(getOnlineSet());
     }
     @GetMapping({"/presence/online", "/online"})
     public ResponseEntity<?> getOnlineStatus(@RequestParam(required = false) String username) {
         if (username != null) markOnline(username);
-        return ResponseEntity.ok(getActiveUserList());
-    }
-    public static Set<String> getOnlineSet() { long cutoff = System.currentTimeMillis() - 120000; onlineUsers.entrySet().removeIf(e -> e.getValue() < cutoff); return onlineUsers.keySet(); }
-    private Set<String> getActiveUserList() {
-        long cutoff = System.currentTimeMillis() - 60000; // Active in last 60s
-        onlineUsers.entrySet().removeIf(e -> e.getValue() < cutoff);
-        return onlineUsers.keySet();
+        return ResponseEntity.ok(getOnlineSet());
     }
 }
