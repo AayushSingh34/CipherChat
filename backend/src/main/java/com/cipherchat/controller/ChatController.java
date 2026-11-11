@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/chat")
 @Transactional
@@ -58,6 +59,7 @@ public class ChatController {
         msg.setMessageType(messageType);
         msg.setFileName(fileName);
         msg.setTimestamp(LocalDateTime.now());
+        msg.setDeletedFor("");
         EncryptedMessage saved = messageRepository.save(msg);
         try {
             messagingTemplate.convertAndSend("/topic/chat/" + receiver, saved);
@@ -89,11 +91,61 @@ public class ChatController {
     public ResponseEntity<?> getHistory(@RequestParam String user1, @RequestParam String user2) {
         try {
             markOnline(user1);
+            String viewer = user1.trim().toLowerCase();
             List<EncryptedMessage> messages = messageRepository.findConversation(user1.trim(), user2.trim());
-            return ResponseEntity.ok(messages);
+            List<EncryptedMessage> visible = messages.stream()
+                .filter(m -> {
+                    String del = m.getDeletedFor().toLowerCase();
+                    return !Arrays.asList(del.split(",")).contains(viewer);
+                })
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(visible);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.ok(Collections.emptyList());
+        }
+    }
+    @PostMapping("/delete")
+    public ResponseEntity<?> deleteMessagePost(@RequestBody Map req) {
+        String id = String.valueOf(req.getOrDefault("messageId", req.getOrDefault("id", ""))).trim();
+        String username = String.valueOf(req.getOrDefault("username", "")).trim();
+        String mode = String.valueOf(req.getOrDefault("mode", "EVERYONE")).trim(); // "ME" or "EVERYONE"
+        return performDeleteMessage(id, username, mode);
+    }
+    @DeleteMapping({"/message/{id}", "/messages/{id}", "/delete/{id}", "/{id}"})
+    public ResponseEntity<?> deleteMessage(@PathVariable String id,
+                                           @RequestParam(required = false, defaultValue = "") String username,
+                                           @RequestParam(required = false, defaultValue = "EVERYONE") String mode) {
+        return performDeleteMessage(id, username.trim(), mode.trim());
+    }
+    private ResponseEntity<?> performDeleteMessage(String id, String username, String mode) {
+        Optional<EncryptedMessage> opt = messageRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.ok(Map.of("status", "DELETED", "id", id));
+        }
+        EncryptedMessage msg = opt.get();
+        if ("ME".equalsIgnoreCase(mode) && !username.isEmpty()) {
+            String current = msg.getDeletedFor();
+            List<String> list = new ArrayList<>(Arrays.asList(current.split(",")));
+            list.removeIf(String::isBlank);
+            if (!list.contains(username.toLowerCase())) {
+                list.add(username.toLowerCase());
+            }
+            msg.setDeletedFor(String.join(",", list));
+            messageRepository.save(msg);
+            return ResponseEntity.ok(Map.of("status", "DELETED_FOR_ME", "id", id));
+        } else {
+            String sender = msg.getSenderUsername();
+            String receiver = msg.getReceiverUsername();
+            messageRepository.delete(msg);
+            Map notify = Map.of("type", "MESSAGE_DELETED", "messageId", id, "id", id);
+            try {
+                messagingTemplate.convertAndSend("/topic/chat/" + receiver, notify);
+                messagingTemplate.convertAndSend("/topic/chat/" + sender, notify);
+                messagingTemplate.convertAndSend("/topic/notifications/" + receiver, notify);
+                messagingTemplate.convertAndSend("/topic/notifications/" + sender, notify);
+            } catch (Exception ignored) {}
+            return ResponseEntity.ok(Map.of("status", "DELETED_FOR_EVERYONE", "id", id));
         }
     }
     @PostMapping("/presence/heartbeat")

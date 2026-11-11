@@ -139,15 +139,25 @@ export default function ChatWindow(props) {
       alert(err.response?.data?.error || 'Only the admin can delete this group/community');
     }
   };
-  const handleDeleteMessage = async (msgId) => {
+  const [deleteMenuMsgId, setDeleteMenuMsgId] = useState(null);
+  const handleDeleteMessage = async (msgId, mode = 'EVERYONE') => {
     try {
-      await API.delete(`/chat/message/${msgId}`, {
-        params: { username: currentUser.username },
-      });
+      setDeleteMenuMsgId(null);
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
       sounds?.playRejectOrBlock?.();
-    } catch {
-      alert('Could not delete message');
+      await API.post('/chat/delete', {
+        messageId: msgId,
+        id: msgId,
+        username: currentUser.username,
+        mode,
+      });
+    } catch (err) {
+      console.error('Delete message error:', err);
+      try {
+        await API.delete(`/chat/message/${msgId}`, {
+          params: { username: currentUser.username, mode },
+        });
+      } catch {}
     }
   };
   const handleInputChange = (e) => {
@@ -222,7 +232,11 @@ export default function ChatWindow(props) {
   };
   // Fixed Block / Unfriend handler: passes both friendshipId AND targetUsername so it never fails!
   const handleManageFriend = async (action) => {
+    if (!currentChat?.username) return;
+    const label = action === 'BLOCK' ? `Block @${currentChat.username}?` : `Remove @${currentChat.username} from friends?`;
+    if (!window.confirm(label)) return;
     try {
+      setShowMenu(false);
       sounds?.playRejectOrBlock?.();
       await API.post('/friends/respond', {
         friendshipId: currentChat.friendshipId || '',
@@ -230,8 +244,10 @@ export default function ChatWindow(props) {
         action,
         username: currentUser.username,
       });
-      setShowMenu(false);
-      onFriendUpdated?.(true);
+      if (props.onFriendUpdated) props.onFriendUpdated(true);
+      if (props.onFriendAction) props.onFriendAction();
+      alert(action === 'BLOCK' ? `@${currentChat.username} has been blocked.` : `@${currentChat.username} removed from friends.`);
+      window.location.reload();
     } catch (err) {
       alert(err.response?.data?.error || 'Could not update friend status');
     }
@@ -474,15 +490,36 @@ export default function ChatWindow(props) {
         {messages.map((m) => {
           const isMe = m.senderUsername === currentUser.username;
           return (
-            <div key={m.id} className={`flex items-center gap-2 group ${isMe ? 'justify-end' : 'justify-start'}`}>
+            <div key={m.id} className={`flex items-center gap-2 group relative ${isMe ? 'justify-end' : 'justify-start'}`}>
               {isMe && (
-                <button
-                  onClick={() => handleDeleteMessage(m.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-slate-900/80 hover:bg-rose-600 text-slate-400 hover:text-white transition"
-                  title="Delete for everyone"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteMenuMsgId(deleteMenuMsgId === m.id ? null : m.id)}
+                    className="opacity-70 group-hover:opacity-100 p-1.5 rounded-lg bg-slate-900/80 hover:bg-rose-600 text-slate-300 hover:text-white transition cursor-pointer"
+                    title="Delete options"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  {deleteMenuMsgId === m.id && (
+                    <div className="absolute right-0 bottom-8 w-44 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-30 py-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(m.id, 'ME')}
+                        className="w-full px-3 py-2 text-left text-slate-200 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Trash2 size={12} className="text-amber-400" /> Delete for me
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(m.id, 'EVERYONE')}
+                        className="w-full px-3 py-2 text-left text-rose-400 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Trash2 size={12} className="text-rose-500" /> Delete for everyone
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               <div
                 className={`max-w-xs md:max-w-md p-3 rounded-2xl text-sm shadow-md ${
@@ -529,6 +566,29 @@ export default function ChatWindow(props) {
                   {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
+              {!isMe && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteMenuMsgId(deleteMenuMsgId === m.id ? null : m.id)}
+                    className="opacity-70 group-hover:opacity-100 p-1.5 rounded-lg bg-slate-900/80 hover:bg-rose-600 text-slate-300 hover:text-white transition cursor-pointer"
+                    title="Delete options"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  {deleteMenuMsgId === m.id && (
+                    <div className="absolute left-0 bottom-8 w-40 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-30 py-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(m.id, 'ME')}
+                        className="w-full px-3 py-2 text-left text-slate-200 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Trash2 size={12} className="text-amber-400" /> Delete for me
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

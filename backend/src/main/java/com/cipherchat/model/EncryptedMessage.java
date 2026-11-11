@@ -20,6 +20,8 @@ public class EncryptedMessage {
     private String fileName;
     @Column(name = "timestamp")
     private LocalDateTime timestamp;
+    @Column(name = "deleted_for")
+    private String deletedFor = "";
     public EncryptedMessage() {}
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -37,4 +39,6 @@ public class EncryptedMessage {
     public void setFileName(String fileName) { this.fileName = fileName; }
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+    public String getDeletedFor() { return deletedFor != null ? deletedFor : ""; }
+    public void setDeletedFor(String deletedFor) { this.deletedFor = deletedFor; }
 }
