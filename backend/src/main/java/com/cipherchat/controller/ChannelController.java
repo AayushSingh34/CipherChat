@@ -156,13 +156,9 @@ public class ChannelController {
         return performDeleteChannel(channelId, username.trim());
     }
     private ResponseEntity<?> performDeleteChannel(String channelId, String username) {
-        Optional<ChatChannel> opt = channelRepository.findById(channelId);
-        if (opt.isEmpty()) {
+        ChatChannel ch = channelRepository.findById(channelId).orElse(null);
+        if (ch == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Group or Community not found"));
-        }
-        ChatChannel ch = opt.get();
-        if (ch.getAdminUsername() != null && !ch.getAdminUsername().equalsIgnoreCase(username)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Only the group/community admin can delete it"));
         }
         channelRepository.delete(ch);
         return ResponseEntity.ok(Map.of("status", "DELETED", "channelId", channelId));
