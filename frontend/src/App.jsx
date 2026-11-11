@@ -117,7 +117,7 @@ export default function App() {
       setEditDisplayName(res.data.displayName || res.data.username);
       setAvatarPreview(res.data.avatar || '');
       setEditSecurityQ(res.data.securityQuestion || '');
-      const initialOnline = await API.get('/chat/presence/online', { params: { username: currentUser?.username } });
+      const initialOnline = await API.get('/chat/presence/online', { params: { username: res.data.username } });
       setOnlineUsers(new Set(initialOnline.data));
       connectSocket(res.data.username, {
         onMessageReceived: (incomingMsg) => {
@@ -311,13 +311,26 @@ export default function App() {
     }
   };
   const togglePrivacy = async (field) => {
-    const updated = {
-      username: user.username,
-      discoverable: field === 'discoverable' ? !user.discoverable : user.discoverable,
-      strictPrivacy: field === 'strictPrivacy' ? !user.strictPrivacy : user.strictPrivacy,
-    };
-    const res = await API.put('/discovery/privacy', updated);
-    setUser(res.data);
+    if (!user) return;
+    const nextDiscoverable = field === 'discoverable' ? !Boolean(user.discoverable) : Boolean(user.discoverable);
+    const nextStrict = field === 'strictPrivacy' ? !Boolean(user.strictPrivacy) : Boolean(user.strictPrivacy);
+    const optimisticUser = { ...user, discoverable: nextDiscoverable, strictPrivacy: nextStrict };
+    setUser(optimisticUser);
+    localStorage.setItem('cipher_user', JSON.stringify(optimisticUser));
+    try {
+      const res = await API.post('/discovery/privacy', {
+        username: user.username,
+        discoverable: nextDiscoverable,
+        strictPrivacy: nextStrict,
+      });
+      if (res.data && res.data.username) {
+        const merged = { ...optimisticUser, ...res.data, discoverable: nextDiscoverable, strictPrivacy: nextStrict };
+        setUser(merged);
+        localStorage.setItem('cipher_user', JSON.stringify(merged));
+      }
+    } catch (err) {
+      console.error('Privacy toggle sync error:', err);
+    }
   };
   if (!user) {
     return (

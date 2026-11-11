@@ -81,25 +81,62 @@ export default function ChatWindow(props) {
   };
   const dispatchPayload = async (rawContent, messageType, fileName = null) => {
     if (!currentChat) return;
-    if (isChannel) {
+    try {
+      let payload;
+      if (isChannel) {
+        payload = {
+          senderUsername: currentUser.username,
+          receiverUsername: currentChat.id,
+          ciphertext: rawContent,
+          iv: 'PLAINTEXT',
+          messageType,
+          fileName,
+        };
+      } else {
+        const { ciphertext, iv } = await encryptText(rawContent, privateKey, currentChat.publicKey);
+        payload = {
+          senderUsername: currentUser.username,
+          receiverUsername: currentChat.username,
+          ciphertext,
+          iv,
+          messageType,
+          fileName,
+        };
+      }
+      // Send via HTTP POST for 100% reliability on Render
+      const res = await API.post('/chat/send', payload);
+      const savedMsg = res.data || { ...payload, id: Date.now().toString(), timestamp: new Date().toISOString() };
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === savedMsg.id)) return prev;
+        return [...prev, { ...savedMsg, plaintext: rawContent }];
+      });
+    } catch (err) {
+      console.error('Failed to send message via REST, trying socket fallback:', err);
       sendEncryptedSocketMessage({
         senderUsername: currentUser.username,
-        receiverUsername: currentChat.id,
+        receiverUsername: isChannel ? currentChat.id : currentChat.username,
         ciphertext: rawContent,
         iv: 'PLAINTEXT',
         messageType,
         fileName,
       });
-    } else {
-      const { ciphertext, iv } = await encryptText(rawContent, privateKey, currentChat.publicKey);
-      sendEncryptedSocketMessage({
-        senderUsername: currentUser.username,
-        receiverUsername: currentChat.username,
-        ciphertext,
-        iv,
-        messageType,
-        fileName,
+    }
+  };
+  const handleDeleteChannel = async () => {
+    const activeCh = channelData || currentChat;
+    if (!activeCh?.id) return;
+    if (!window.confirm(`Are you sure you want to permanently delete "${activeCh.name}"?`)) return;
+    try {
+      await API.post('/channels/delete', {
+        channelId: activeCh.id,
+        username: currentUser.username,
       });
+      sounds?.playRejectOrBlock?.();
+      if (props.onFriendAction) props.onFriendAction();
+      if (props.onChannelDeleted) props.onChannelDeleted(activeCh.id);
+      window.location.reload();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Only the admin can delete this group/community');
     }
   };
   const handleDeleteMessage = async (msgId) => {
@@ -304,18 +341,33 @@ export default function ChatWindow(props) {
           </div>
         </div>
         {isChannel ? (
-          <button
-            onClick={() => setShowMembersPanel(!showMembersPanel)}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-white flex items-center gap-1.5"
-          >
-            <Users size={14} className="text-indigo-400" />
-            Manage Members
-            {activeChannel.pendingRequests?.length > 0 && (
-              <span className="bg-amber-500 text-black text-[10px] font-bold px-1.5 rounded-full">
-                {activeChannel.pendingRequests.length}
-              </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMembersPanel(!showMembersPanel)}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-white flex items-center gap-1.5 cursor-pointer"
+            >
+              <Users size={14} className="text-indigo-400" />
+              Manage Members
+              {activeChannel.pendingRequests?.length > 0 && (
+                <span className="bg-amber-500 text-black text-[10px] font-bold px-1.5 rounded-full">
+                  {activeChannel.pendingRequests.length}
+                </span>
+              )}
+            </button>
+            {(!activeChannel.adminUsername ||
+              activeChannel.adminUsername?.toLowerCase() === currentUser.username?.toLowerCase() ||
+              activeChannel.creatorUsername?.toLowerCase() === currentUser.username?.toLowerCase() ||
+              activeChannel.createdBy?.toLowerCase() === currentUser.username?.toLowerCase()) && (
+              <button
+                onClick={handleDeleteChannel}
+                className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 border border-rose-500/40 text-xs text-rose-300 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                title="Delete Group or Community"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
             )}
-          </button>
+          </div>
         ) : (
           <div className="relative">
             <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-300">
