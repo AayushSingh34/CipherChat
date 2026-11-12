@@ -89,7 +89,7 @@ public class AuthController {
         }
         return ResponseEntity.ok(opt.get());
     }
-    @PostMapping({"/privacy", "/update-privacy"})
+    @RequestMapping(value = {"/privacy", "/update-privacy"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> updatePrivacy(@RequestBody Map req) {
         String username = String.valueOf(req.get("username")).trim();
         Optional<User> opt = userRepository.findByUsername(username);
@@ -104,7 +104,7 @@ public class AuthController {
         User saved = userRepository.save(u);
         return ResponseEntity.ok(saved);
     }
-    @PostMapping("/profile")
+    @RequestMapping(value = {"/profile", "/update-profile", "/user"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> updateProfile(@RequestBody Map req) {
         String username = String.valueOf(req.get("username")).trim();
         Optional<User> opt = userRepository.findByUsername(username);
@@ -112,6 +112,13 @@ public class AuthController {
         User u = opt.get();
         if (req.get("displayName") != null) u.setDisplayName(String.valueOf(req.get("displayName")));
         if (req.get("avatar") != null) u.setAvatar(String.valueOf(req.get("avatar")));
+        if (req.get("securityQuestion") != null) u.setSecurityQuestion(String.valueOf(req.get("securityQuestion")));
+        if (req.get("securityAnswer") != null && !String.valueOf(req.get("securityAnswer")).isBlank()) {
+            u.setSecurityAnswer(String.valueOf(req.get("securityAnswer")));
+        }
+        if (req.get("newPassword") != null && !String.valueOf(req.get("newPassword")).isBlank()) {
+            u.setPasswordHash(String.valueOf(req.get("newPassword")));
+        }
         User saved = userRepository.save(u);
         return ResponseEntity.ok(saved);
     }

@@ -232,23 +232,22 @@ export default function ChatWindow(props) {
   };
   // Fixed Block / Unfriend handler: passes both friendshipId AND targetUsername so it never fails!
   const handleManageFriend = async (action) => {
-    if (!currentChat?.username) return;
-    const label = action === 'BLOCK' ? `Block @${currentChat.username}?` : `Remove @${currentChat.username} from friends?`;
-    if (!window.confirm(label)) return;
+    const target = currentChat?.username || currentChat?.name;
+    if (!target) return;
     try {
       setShowMenu(false);
       sounds?.playRejectOrBlock?.();
       await API.post('/friends/respond', {
         friendshipId: currentChat.friendshipId || '',
-        targetUsername: currentChat.username,
+        targetUsername: target,
         action,
         username: currentUser.username,
       });
       if (props.onFriendUpdated) props.onFriendUpdated(true);
       if (props.onFriendAction) props.onFriendAction();
-      alert(action === 'BLOCK' ? `@${currentChat.username} has been blocked.` : `@${currentChat.username} removed from friends.`);
       window.location.reload();
     } catch (err) {
+      console.error('Manage friend error:', err);
       alert(err.response?.data?.error || 'Could not update friend status');
     }
   };
@@ -392,13 +391,13 @@ export default function ChatWindow(props) {
             {showMenu && (
               <div className="absolute right-0 mt-2 w-44 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-20 py-1">
                 <button
-                  onClick={() => handleManageFriend('UNFRIEND')}
+                  type="button" onClick={(e) => { e.stopPropagation(); handleManageFriend('UNFRIEND'); }}
                   className="w-full px-4 py-2 text-left text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2"
                 >
                   <UserMinus size={14} className="text-amber-400" /> Unfriend
                 </button>
                 <button
-                  onClick={() => handleManageFriend('BLOCK')}
+                  type="button" onClick={(e) => { e.stopPropagation(); handleManageFriend('BLOCK'); }}
                   className="w-full px-4 py-2 text-left text-xs text-rose-400 hover:bg-slate-800 flex items-center gap-2"
                 >
                   <ShieldBan size={14} /> Block User

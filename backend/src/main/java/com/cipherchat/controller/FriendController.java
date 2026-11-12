@@ -34,10 +34,10 @@ public class FriendController {
             if (userRepository.findByUsername(to).isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
             }
-            Optional<Friendship> existing = friendshipRepository.findRelation(from, to);
-            if (existing.isPresent()) {
-                Friendship f = existing.get();
-                if ("BLOCKED".equals(f.getStatus())) {
+            List<Friendship> existingList = friendshipRepository.findRelationsBetween(from, to);
+            if (!existingList.isEmpty()) {
+                Friendship f = existingList.get(0);
+                if ("BLOCKED".equalsIgnoreCase(f.getStatus())) {
                     return ResponseEntity.badRequest().body(Map.of("error", "User is blocked"));
                 }
                 return ResponseEntity.badRequest().body(Map.of("error", "Request or friendship already exists"));
@@ -58,42 +58,50 @@ public class FriendController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
-    @PostMapping("/respond")
+    @RequestMapping(value = {"/respond", "/block", "/unfriend"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> respondToRequest(@RequestBody Map req) {
         try {
             String friendshipId = req.get("friendshipId") != null ? String.valueOf(req.get("friendshipId")).trim() : "";
-            String action = req.get("action") != null ? String.valueOf(req.get("action")).trim() : "";
-            String currentUsername = req.get("username") != null ? String.valueOf(req.get("username")).trim() : "";
-            String targetUsername = req.get("targetUsername") != null ? String.valueOf(req.get("targetUsername")).trim() : "";
+            String action = req.get("action") != null ? String.valueOf(req.get("action")).trim() : "BLOCK";
+            String currentUsername = req.get("username") != null ? String.valueOf(req.get("username")).trim()
+                                   : String.valueOf(req.getOrDefault("requester", "")).trim();
+            String targetUsername = req.get("targetUsername") != null ? String.valueOf(req.get("targetUsername")).trim()
+                                  : String.valueOf(req.getOrDefault("addressee", "")).trim();
             ChatController.markOnline(currentUsername);
-            Optional<Friendship> opt = Optional.empty();
+            List<Friendship> matches = new ArrayList<>();
             if (!friendshipId.isEmpty() && !"null".equalsIgnoreCase(friendshipId) && !"undefined".equalsIgnoreCase(friendshipId)) {
-                opt = friendshipRepository.findById(friendshipId);
+                friendshipRepository.findById(friendshipId).ifPresent(matches::add);
             }
-            if (opt.isEmpty() && !targetUsername.isEmpty() && !currentUsername.isEmpty()) {
-                opt = friendshipRepository.findRelation(currentUsername, targetUsername);
+            if (matches.isEmpty() && !currentUsername.isEmpty() && !targetUsername.isEmpty()) {
+                matches.addAll(friendshipRepository.findRelationsBetween(currentUsername, targetUsername));
             }
-            if (opt.isEmpty()) {
-                if ("BLOCK".equalsIgnoreCase(action) && !targetUsername.isEmpty() && !currentUsername.isEmpty()) {
+            if (matches.isEmpty()) {
+                if ("BLOCK".equalsIgnoreCase(action) && !currentUsername.isEmpty() && !targetUsername.isEmpty()) {
                     Friendship f = new Friendship(currentUsername, targetUsername, "BLOCKED");
                     f.setBlockedBy(currentUsername);
-                    friendshipRepository.save(f);
-                    return ResponseEntity.ok(Map.of("status", "SUCCESS"));
+                    Friendship saved = friendshipRepository.save(f);
+                    return ResponseEntity.ok(Map.of("status", "BLOCKED", "friendshipId", saved.getId()));
                 }
-                return ResponseEntity.badRequest().body(Map.of("error", "Friendship relation not found"));
+                return ResponseEntity.ok(Map.of("status", "CLEARED"));
             }
-            Friendship f = opt.get();
-            String reqUser = f.getRequesterUsername();
-            String addUser = f.getAddresseeUsername();
+            Friendship primary = matches.get(0);
+            // Clean up any duplicate rows if they existed
+            if (matches.size() > 1) {
+                for (int i = 1; i < matches.size(); i++) {
+                    friendshipRepository.delete(matches.get(i));
+                }
+            }
+            String reqUser = primary.getRequesterUsername();
+            String addUser = primary.getAddresseeUsername();
             if ("ACCEPT".equalsIgnoreCase(action)) {
-                f.setStatus("ACCEPTED");
-                friendshipRepository.save(f);
+                primary.setStatus("ACCEPTED");
+                friendshipRepository.save(primary);
             } else if ("REJECT".equalsIgnoreCase(action) || "UNFRIEND".equalsIgnoreCase(action) || "UNBLOCK".equalsIgnoreCase(action)) {
-                friendshipRepository.delete(f);
+                friendshipRepository.delete(primary);
             } else if ("BLOCK".equalsIgnoreCase(action)) {
-                f.setStatus("BLOCKED");
-                f.setBlockedBy(currentUsername);
-                friendshipRepository.save(f);
+                primary.setStatus("BLOCKED");
+                primary.setBlockedBy(currentUsername.isEmpty() ? reqUser : currentUsername);
+                friendshipRepository.save(primary);
             }
             Map payload = new HashMap();
             payload.put("type", "FRIEND_" + action.toUpperCase());
@@ -102,7 +110,7 @@ public class FriendController {
                 messagingTemplate.convertAndSend("/topic/notifications/" + reqUser, payload);
                 messagingTemplate.convertAndSend("/topic/notifications/" + addUser, payload);
             } catch (Exception ignored) {}
-            return ResponseEntity.ok(Map.of("status", "SUCCESS"));
+            return ResponseEntity.ok(Map.of("status", "SUCCESS", "action", action));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
@@ -112,11 +120,9 @@ public class FriendController {
     public ResponseEntity<?> getFriends(@RequestParam String username) {
         try {
             ChatController.markOnline(username);
-            Set<String> activeUsers = ChatController.getOnlineSet();
-            List relations = friendshipRepository.findAllForUser(username.trim());
+            List<Friendship> relations = friendshipRepository.findAllForUser(username.trim());
             List result = new ArrayList();
-            for (Object obj : relations) {
-                Friendship f = (Friendship) obj;
+            for (Friendship f : relations) {
                 String partnerName = f.getRequesterUsername().equalsIgnoreCase(username.trim())
                         ? f.getAddresseeUsername()
                         : f.getRequesterUsername();
