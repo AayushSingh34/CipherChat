@@ -294,20 +294,30 @@ export default function App() {
   };
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    const payload = {
+      username: user.username,
+      displayName: editDisplayName || user.displayName || user.username,
+      newPassword: editPassword || undefined,
+      avatar: avatarPreview,
+      securityQuestion: editSecurityQ || undefined,
+      securityAnswer: editSecurityA || undefined,
+    };
     try {
-      const res = await API.put('/auth/profile', {
-        username: user.username,
-        displayName: editDisplayName,
-        newPassword: editPassword || undefined,
-        avatar: avatarPreview,
-        securityQuestion: editSecurityQ || undefined,
-        securityAnswer: editSecurityA || undefined,
-      });
-      setUser(res.data);
+      let res;
+      try {
+        res = await API.post('/auth/profile', payload);
+      } catch {
+        res = await API.put('/auth/profile', payload);
+      }
+      const updatedUser = { ...user, ...res.data, displayName: payload.displayName, avatar: avatarPreview };
+      setUser(updatedUser);
+      localStorage.setItem('cipher_user', JSON.stringify(updatedUser));
       setShowProfileModal(false);
-      sounds.playAccept();
-    } catch {
-      alert('Could not update profile');
+      sounds?.playAccept?.();
+      fetchSocialData();
+    } catch (err) {
+      console.error('Profile update error:', err);
+      alert(err.response?.data?.error || 'Could not update profile');
     }
   };
   const togglePrivacy = async (field) => {

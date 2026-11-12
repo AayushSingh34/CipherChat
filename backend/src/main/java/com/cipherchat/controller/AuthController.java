@@ -2,8 +2,11 @@ package com.cipherchat.controller;
 import com.cipherchat.model.User;
 import com.cipherchat.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import jakarta.annotation.PostConstruct;
 import java.util.*;
 @RestController
 @RequestMapping("/api/auth")
@@ -11,8 +14,22 @@ import java.util.*;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class AuthController {
     private final UserRepository userRepository;
-    public AuthController(UserRepository userRepository) {
+    private final SimpMessagingTemplate messagingTemplate;
+    private final JdbcTemplate jdbcTemplate;
+    public AuthController(UserRepository userRepository,
+                          SimpMessagingTemplate messagingTemplate,
+                          JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
+        this.messagingTemplate = messagingTemplate;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+    @PostConstruct
+    public void ensurePostgresTextColumns() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN avatar TYPE TEXT");
+            jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN public_key TYPE TEXT");
+            jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN display_name TYPE TEXT");
+        } catch (Exception ignored) {}
     }
     private String extractPassword(Map req) {
         if (req.get("password") != null && !String.valueOf(req.get("password")).isEmpty()) {
@@ -20,6 +37,9 @@ public class AuthController {
         }
         if (req.get("passwordHash") != null && !String.valueOf(req.get("passwordHash")).isEmpty()) {
             return String.valueOf(req.get("passwordHash"));
+        }
+        if (req.get("newPassword") != null && !String.valueOf(req.get("newPassword")).isEmpty()) {
+            return String.valueOf(req.get("newPassword"));
         }
         return "";
     }
@@ -106,21 +126,43 @@ public class AuthController {
     }
     @RequestMapping(value = {"/profile", "/update-profile", "/user"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> updateProfile(@RequestBody Map req) {
-        String username = String.valueOf(req.get("username")).trim();
-        Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
-        User u = opt.get();
-        if (req.get("displayName") != null) u.setDisplayName(String.valueOf(req.get("displayName")));
-        if (req.get("avatar") != null) u.setAvatar(String.valueOf(req.get("avatar")));
-        if (req.get("securityQuestion") != null) u.setSecurityQuestion(String.valueOf(req.get("securityQuestion")));
-        if (req.get("securityAnswer") != null && !String.valueOf(req.get("securityAnswer")).isBlank()) {
-            u.setSecurityAnswer(String.valueOf(req.get("securityAnswer")));
+        try {
+            String username = String.valueOf(req.get("username")).trim();
+            User u = userRepository.findByUsername(username).orElseGet(() -> {
+                User newUser = new User();
+                newUser.setId(UUID.randomUUID().toString());
+                newUser.setUsername(username);
+                newUser.setPasswordHash("auto");
+                newUser.setPublicKey("KEY_" + username);
+                newUser.setDiscoverable(true);
+                newUser.setStrictPrivacy(false);
+                return newUser;
+            });
+            if (req.get("displayName") != null && !String.valueOf(req.get("displayName")).isBlank()) {
+                u.setDisplayName(String.valueOf(req.get("displayName")).trim());
+            }
+            if (req.get("avatar") != null) {
+                u.setAvatar(String.valueOf(req.get("avatar")));
+            }
+            if (req.get("securityQuestion") != null && !String.valueOf(req.get("securityQuestion")).isBlank()) {
+                u.setSecurityQuestion(String.valueOf(req.get("securityQuestion")));
+            }
+            if (req.get("securityAnswer") != null && !String.valueOf(req.get("securityAnswer")).isBlank()) {
+                u.setSecurityAnswer(String.valueOf(req.get("securityAnswer")));
+            }
+            String newPass = extractPassword(req);
+            if (!newPass.isEmpty()) {
+                u.setPasswordHash(newPass);
+            }
+            User saved = userRepository.save(u);
+            try {
+                messagingTemplate.convertAndSend("/topic/presence", Map.of("type", "PROFILE_UPDATED", "username", saved.getUsername()));
+            } catch (Exception ignored) {}
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
-        if (req.get("newPassword") != null && !String.valueOf(req.get("newPassword")).isBlank()) {
-            u.setPasswordHash(String.valueOf(req.get("newPassword")));
-        }
-        User saved = userRepository.save(u);
-        return ResponseEntity.ok(saved);
     }
     @GetMapping("/recovery-question")
     public ResponseEntity<?> getRecoveryQuestion(@RequestParam String username) {
@@ -131,7 +173,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("question", opt.get().getSecurityQuestion()));
     }
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody Map req) {
+    public ResponseEntity<?> resetPassword(@RequestParam(required = false) String uParam, @RequestBody Map req) {
         String username = String.valueOf(req.get("username")).trim();
         String answer = String.valueOf(req.get("securityAnswer")).trim();
         String newPass = extractPassword(req);
