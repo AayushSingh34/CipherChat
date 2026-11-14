@@ -186,6 +186,29 @@ export default function App() {
       const all = res.data;
       const incoming = all.filter((f) => f.status === 'PENDING' && !f.isRequester);
       const accepted = all.filter((f) => f.status === 'ACCEPTED');
+      const blockedUsernames = new Set(all.filter((f) => f.status === 'BLOCKED').map((f) => f.username.toLowerCase()));
+      const knownUsernames = new Set(all.map((f) => f.username.toLowerCase()));
+      try {
+        const convRes = await API.get('/chat/conversations', { params: { username: user.username } });
+        if (Array.isArray(convRes.data)) {
+          for (const partnerName of convRes.data) {
+            const lower = String(partnerName).toLowerCase();
+            if (!knownUsernames.has(lower) && !blockedUsernames.has(lower) && lower !== user.username.toLowerCase()) {
+              try {
+                const uRes = await API.get('/auth/search', { params: { username: partnerName } });
+                if (uRes.data && uRes.data.username) {
+                  accepted.push({
+                    ...uRes.data,
+                    status: 'OPEN_DM',
+                    isOpenDm: true,
+                  });
+                  knownUsernames.add(lower);
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch {}
       const blocked = all.filter((f) => f.status === 'BLOCKED' && f.blockedBy?.toLowerCase() === user.username?.toLowerCase());
       const map = {};
       all.forEach((rel) => { map[rel.username] = rel; });

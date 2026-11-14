@@ -140,6 +140,27 @@ export default function ChatWindow(props) {
     }
   };
   const [deleteMenuMsgId, setDeleteMenuMsgId] = useState(null);
+  const [friendReqSent, setFriendReqSent] = useState(false);
+  useEffect(() => {
+    setFriendReqSent(false);
+  }, [currentChat?.username]);
+  const relation = !isChannel && currentChat?.username ? props.friendsMap?.[currentChat.username] : null;
+  const isAcceptedFriend = relation?.status === 'ACCEPTED';
+  const isPendingFriend = relation?.status === 'PENDING' || friendReqSent;
+  const handleSendFriendFromChat = async () => {
+    if (!currentChat?.username) return;
+    try {
+      await API.post('/friends/request', {
+        requester: currentUser.username,
+        addressee: currentChat.username,
+      });
+      setFriendReqSent(true);
+      sounds?.playAccept?.();
+      if (props.onFriendUpdated) props.onFriendUpdated(false);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not send friend request');
+    }
+  };
   const [resolvedPartnerKey, setResolvedPartnerKey] = useState(currentChat?.publicKey || '');
   useEffect(() => {
     setResolvedPartnerKey(currentChat?.publicKey || '');
@@ -492,6 +513,27 @@ export default function ChatWindow(props) {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+            {/* Non-Friend Open DM Banner */}
+      {!isChannel && !isAcceptedFriend && (
+        <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/30 flex items-center justify-between gap-3 relative z-20">
+          <p className="text-xs text-amber-200">
+            <span className="font-semibold">Open DM:</span> @{currentChat.displayName || currentChat.username} is not in your friends list yet.
+          </p>
+          {isPendingFriend ? (
+            <span className="px-3 py-1 rounded-lg bg-slate-800 text-amber-300 text-xs font-medium">
+              Friend Request Sent
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSendFriendFromChat}
+              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+            >
+              <UserPlus size={13} /> Send Friend Request
+            </button>
           )}
         </div>
       )}

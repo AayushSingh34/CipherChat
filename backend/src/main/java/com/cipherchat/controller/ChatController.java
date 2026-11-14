@@ -161,4 +161,25 @@ public class ChatController {
         if (username != null) markOnline(username);
         return ResponseEntity.ok(getOnlineSet());
     }
+    @GetMapping("/conversations")
+    public ResponseEntity<?> getOpenDmPartners(@RequestParam String username) {
+        try {
+            String me = username.trim().toLowerCase();
+            List<EncryptedMessage> all = messageRepository.findAll();
+            Set<String> partners = new LinkedHashSet<>();
+            for (EncryptedMessage m : all) {
+                if (m.getSenderUsername() == null || m.getReceiverUsername() == null) continue;
+                String s = m.getSenderUsername().trim();
+                String r = m.getReceiverUsername().trim();
+                if (s.equalsIgnoreCase(me) && !r.isEmpty()) {
+                    partners.add(r);
+                } else if (r.equalsIgnoreCase(me) && !s.isEmpty()) {
+                    partners.add(s);
+                }
+            }
+            return ResponseEntity.ok(new ArrayList<>(partners));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+    }
 }
