@@ -108,7 +108,7 @@ export default function App() {
     const endpoint = isRegistering ? '/auth/register' : '/auth/login';
     try {
       const res = await API.post(endpoint, {
-        username: usernameInput,
+        username: usernameInput.trim(),
         passwordHash: passwordInput,
         publicKey: publicKeyBase64,
         securityQuestion: securityQuestionInput || undefined,
@@ -152,7 +152,12 @@ export default function App() {
         },
       });
     } catch (err) {
-      console.warn("Auth sync skipped");
+      const errMsg =
+        err.response?.data?.error ||
+        (isRegistering
+          ? 'Registration failed. Please check your details or try a different username.'
+          : 'Invalid details or user not found. Please register first.');
+      window.alert(errMsg);
     }
   };
   const handleFetchSecurityQuestion = async (e) => {
@@ -169,7 +174,7 @@ export default function App() {
     e.preventDefault();
     try {
       await API.post('/auth/reset-password', {
-        username: usernameInput,
+        username: usernameInput.trim(),
         securityAnswer: resetAnswer,
         newPassword: newPasswordInput,
       });
