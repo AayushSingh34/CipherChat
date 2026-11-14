@@ -2,6 +2,7 @@ package com.cipherchat.controller;
 import com.cipherchat.model.EncryptedMessage;
 import com.cipherchat.repository.MessageRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -19,10 +20,12 @@ import java.util.stream.Collectors;
 public class ChatController {
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final JdbcTemplate jdbcTemplate;
     private static final Map<String, Long> onlineUsers = new ConcurrentHashMap<>();
-    public ChatController(MessageRepository messageRepository, SimpMessagingTemplate messagingTemplate) {
+    public ChatController(MessageRepository messageRepository, SimpMessagingTemplate messagingTemplate, JdbcTemplate jdbcTemplate) {
         this.messageRepository = messageRepository;
         this.messagingTemplate = messagingTemplate;
+        this.jdbcTemplate = jdbcTemplate;
     }
     public static void markOnline(String username) {
         if (username != null && !username.isBlank() && !"null".equalsIgnoreCase(username) && !"undefined".equalsIgnoreCase(username)) {
@@ -165,17 +168,16 @@ public class ChatController {
     public ResponseEntity<?> getOpenDmPartners(@RequestParam String username) {
         try {
             String me = username.trim().toLowerCase();
-            List<EncryptedMessage> all = messageRepository.findAll();
             Set<String> partners = new LinkedHashSet<>();
-            for (EncryptedMessage m : all) {
-                if (m.getSenderUsername() == null || m.getReceiverUsername() == null) continue;
-                String s = m.getSenderUsername().trim();
-                String r = m.getReceiverUsername().trim();
-                if (s.equalsIgnoreCase(me) && !r.isEmpty()) {
-                    partners.add(r);
-                } else if (r.equalsIgnoreCase(me) && !s.isEmpty()) {
-                    partners.add(s);
-                }
+            List> rows = jdbcTemplate.queryForList(
+                "SELECT DISTINCT sender_username, receiver_username FROM encrypted_messages WHERE LOWER(sender_username) = ? OR LOWER(receiver_username) = ?",
+                me, me
+            );
+            for (Map<String, Object> row : rows) {
+                String s = row.get("sender_username") != null ? String.valueOf(row.get("sender_username")).trim() : "";
+                String r = row.get("receiver_username") != null ? String.valueOf(row.get("receiver_username")).trim() : "";
+                if (s.equalsIgnoreCase(me) && !r.isEmpty()) partners.add(r);
+                else if (r.equalsIgnoreCase(me) && !s.isEmpty()) partners.add(s);
             }
             return ResponseEntity.ok(new ArrayList<>(partners));
         } catch (Exception e) {
