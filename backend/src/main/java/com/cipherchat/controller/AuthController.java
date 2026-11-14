@@ -47,23 +47,31 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody Map req) {
         try {
             String username = String.valueOf(req.get("username")).trim();
+            if (username.isEmpty() || "null".equalsIgnoreCase(username)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Username is required."));
+            }
+            if (userRepository.findByUsername(username).isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Username already exists. Please log in."));
+            }
             String pass = extractPassword(req);
+            if (pass.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Password is required to register."));
+            }
             String publicKey = req.get("publicKey") != null ? String.valueOf(req.get("publicKey")) : "KEY_" + username;
-            User user = userRepository.findByUsername(username).orElseGet(() -> {
-                User u = new User();
-                u.setId(UUID.randomUUID().toString());
-                u.setUsername(username);
-                u.setDiscoverable(true);
-                u.setStrictPrivacy(false);
-                return u;
-            });
-            if (!pass.isEmpty()) user.setPasswordHash(pass);
+            User user = new User();
+            user.setId(UUID.randomUUID().toString());
+            user.setUsername(username);
+            user.setDisplayName(req.get("displayName") != null && !String.valueOf(req.get("displayName")).isBlank()
+                    ? String.valueOf(req.get("displayName")).trim()
+                    : username);
+            user.setPasswordHash(pass);
             user.setPublicKey(publicKey);
-            if (req.get("displayName") != null) user.setDisplayName(String.valueOf(req.get("displayName")));
+            user.setDiscoverable(true);
+            user.setStrictPrivacy(false);
             if (req.get("avatar") != null) user.setAvatar(String.valueOf(req.get("avatar")));
             if (req.get("securityQuestion") != null) user.setSecurityQuestion(String.valueOf(req.get("securityQuestion")));
             if (req.get("securityAnswer") != null) user.setSecurityAnswer(String.valueOf(req.get("securityAnswer")));
-            User saved = userRepository.save(user);
+            User saved = userRepository.saveAndFlush(user);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             e.printStackTrace();
@@ -73,38 +81,26 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map req) {
         try {
-            String username = String.valueOf(req.get("username")).trim();
+            String username = req.get("username") != null ? String.valueOf(req.get("username")).trim() : "";
             String pass = extractPassword(req);
-            String publicKey = req.get("publicKey") != null ? String.valueOf(req.get("publicKey")) : "KEY_" + username;
+            String publicKey = req.get("publicKey") != null ? String.valueOf(req.get("publicKey")) : "";
+            if (username.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Please enter your username."));
+            }
             Optional<User> opt = userRepository.findByUsername(username);
-            User user;
             if (opt.isEmpty()) {
-                user = new User();
-                user.setId(UUID.randomUUID().toString());
-                user.setUsername(username);
-                user.setDisplayName(username);
-                user.setPasswordHash(pass);
+                return ResponseEntity.status(404).body(Map.of("error", "No user details found. Please register first."));
+            }
+            User user = opt.get();
+            if (user.getPasswordHash() != null && !user.getPasswordHash().isEmpty() && !user.getPasswordHash().equals(pass)) {
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid password. Please check your credentials."));
+            }
+            if (publicKey != null && !publicKey.isBlank() && !publicKey.startsWith("KEY_") && !publicKey.equals(user.getPublicKey())) {
                 user.setPublicKey(publicKey);
-                user.setDiscoverable(true);
-                user.setStrictPrivacy(false);
-                user = userRepository.save(user);
-            } else {
-                user = opt.get();
-                boolean changed = false;
-                if (!pass.isEmpty() && (user.getPasswordHash() == null || !user.getPasswordHash().equals(pass))) {
-                    user.setPasswordHash(pass);
-                    changed = true;
-                }
-                if (publicKey != null && !publicKey.isBlank() && !publicKey.startsWith("KEY_") && !publicKey.equals(user.getPublicKey())) {
-                    user.setPublicKey(publicKey);
-                    changed = true;
-                }
-                if (changed) {
-                    user = userRepository.saveAndFlush(user);
-                    try {
-                        messagingTemplate.convertAndSend("/topic/presence", Map.of("type", "PROFILE_UPDATED", "username", user.getUsername()));
-                    } catch (Exception ignored) {}
-                }
+                user = userRepository.saveAndFlush(user);
+                try {
+                    messagingTemplate.convertAndSend("/topic/presence", Map.of("type", "PROFILE_UPDATED", "username", user.getUsername()));
+                } catch (Exception ignored) {}
             }
             return ResponseEntity.ok(user);
         } catch (Exception e) {
@@ -116,7 +112,7 @@ public class AuthController {
     public ResponseEntity<?> searchUser(@RequestParam String username) {
         Optional<User> opt = userRepository.findByUsername(username.trim());
         if (opt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+            return ResponseEntity.status(404).body(Map.of("error", "No user details found"));
         }
         return ResponseEntity.ok(opt.get());
     }
@@ -124,7 +120,7 @@ public class AuthController {
     public ResponseEntity<?> updatePrivacy(@RequestBody Map req) {
         String username = String.valueOf(req.get("username")).trim();
         Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "No user details found"));
         User u = opt.get();
         if (req.containsKey("discoverable")) {
             u.setDiscoverable(Boolean.parseBoolean(String.valueOf(req.get("discoverable"))));
@@ -132,23 +128,18 @@ public class AuthController {
         if (req.containsKey("strictPrivacy")) {
             u.setStrictPrivacy(Boolean.parseBoolean(String.valueOf(req.get("strictPrivacy"))));
         }
-        User saved = userRepository.save(u);
+        User saved = userRepository.saveAndFlush(u);
         return ResponseEntity.ok(saved);
     }
     @RequestMapping(value = {"/profile", "/update-profile", "/user"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> updateProfile(@RequestBody Map req) {
         try {
             String username = String.valueOf(req.get("username")).trim();
-            User u = userRepository.findByUsername(username).orElseGet(() -> {
-                User newUser = new User();
-                newUser.setId(UUID.randomUUID().toString());
-                newUser.setUsername(username);
-                newUser.setPasswordHash("auto");
-                newUser.setPublicKey("KEY_" + username);
-                newUser.setDiscoverable(true);
-                newUser.setStrictPrivacy(false);
-                return newUser;
-            });
+            Optional<User> opt = userRepository.findByUsername(username);
+            if (opt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "No user details found. Please register first."));
+            }
+            User u = opt.get();
             if (req.get("displayName") != null && !String.valueOf(req.get("displayName")).isBlank()) {
                 u.setDisplayName(String.valueOf(req.get("displayName")).trim());
             }
@@ -165,7 +156,7 @@ public class AuthController {
             if (!newPass.isEmpty()) {
                 u.setPasswordHash(newPass);
             }
-            User saved = userRepository.save(u);
+            User saved = userRepository.saveAndFlush(u);
             try {
                 messagingTemplate.convertAndSend("/topic/presence", Map.of("type", "PROFILE_UPDATED", "username", saved.getUsername()));
             } catch (Exception ignored) {}
@@ -179,21 +170,21 @@ public class AuthController {
     public ResponseEntity<?> getRecoveryQuestion(@RequestParam String username) {
         Optional<User> opt = userRepository.findByUsername(username.trim());
         if (opt.isEmpty() || opt.get().getSecurityQuestion() == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "No recovery question found"));
+            return ResponseEntity.badRequest().body(Map.of("error", "No user details or recovery question found"));
         }
         return ResponseEntity.ok(Map.of("question", opt.get().getSecurityQuestion()));
     }
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestParam(required = false) String uParam, @RequestBody Map req) {
+    public ResponseEntity<?> resetPassword(@RequestBody Map req) {
         String username = String.valueOf(req.get("username")).trim();
         String answer = String.valueOf(req.get("securityAnswer")).trim();
         String newPass = extractPassword(req);
         Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        if (opt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "No user details found"));
         User u = opt.get();
         if (u.getSecurityAnswer() != null && u.getSecurityAnswer().equalsIgnoreCase(answer)) {
             u.setPasswordHash(newPass);
-            userRepository.save(u);
+            userRepository.saveAndFlush(u);
             return ResponseEntity.ok(Map.of("status", "PASSWORD_UPDATED"));
         }
         return ResponseEntity.badRequest().body(Map.of("error", "Incorrect security answer"));

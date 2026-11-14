@@ -8,6 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -58,7 +59,7 @@ public class ChatController {
         msg.setIv(iv);
         msg.setMessageType(messageType);
         msg.setFileName(fileName);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
         msg.setDeletedFor("");
         EncryptedMessage saved = messageRepository.save(msg);
         try {

@@ -562,7 +562,7 @@ export default function ChatWindow(props) {
                   <p className="whitespace-pre-wrap break-words">{m.plaintext}</p>
                 )}
                 <span className="block text-[10px] opacity-60 mt-1 text-right">
-                  {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(typeof m.timestamp === "string" && !m.timestamp.endsWith("Z") && !m.timestamp.includes("+") ? m.timestamp + "Z" : m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               {!isMe && (
