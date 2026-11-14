@@ -186,7 +186,7 @@ export default function App() {
       const all = res.data;
       const incoming = all.filter((f) => f.status === 'PENDING' && !f.isRequester);
       const accepted = all.filter((f) => f.status === 'ACCEPTED');
-      const blocked = all.filter((f) => f.status === 'BLOCKED' && f.blockedBy === user.username);
+      const blocked = all.filter((f) => f.status === 'BLOCKED' && f.blockedBy?.toLowerCase() === user.username?.toLowerCase());
       const map = {};
       all.forEach((rel) => { map[rel.username] = rel; });
       setPendingRequests(incoming);

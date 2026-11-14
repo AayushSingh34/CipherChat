@@ -245,7 +245,7 @@ export default function ChatWindow(props) {
       });
       if (props.onFriendUpdated) props.onFriendUpdated(true);
       if (props.onFriendAction) props.onFriendAction();
-      window.location.reload();
+      
     } catch (err) {
       console.error('Manage friend error:', err);
       alert(err.response?.data?.error || 'Could not update friend status');
@@ -317,7 +317,7 @@ export default function ChatWindow(props) {
     <div className={`flex-1 flex flex-col h-full relative transition-colors ${themeConfig?.bgClass || 'bg-slate-950'}`} style={containerStyle}>
       {themeConfig?.customImage && <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px] pointer-events-none" />}
       {/* Header */}
-      <div className="p-4 border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md flex items-center justify-between relative z-10">
+      <div className="p-4 border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md flex items-center justify-between relative z-30">
         <div className="flex items-center gap-3">
           {isChannel ? (
             activeChannel.avatar ? (
@@ -389,7 +389,7 @@ export default function ChatWindow(props) {
               <MoreVertical size={18} />
             </button>
             {showMenu && (
-              <div className="absolute right-0 mt-2 w-44 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-20 py-1">
+              <div className="absolute right-0 mt-2 w-44 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-50 py-1">
                 <button
                   type="button" onClick={(e) => { e.stopPropagation(); handleManageFriend('UNFRIEND'); }}
                   className="w-full px-4 py-2 text-left text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2"
