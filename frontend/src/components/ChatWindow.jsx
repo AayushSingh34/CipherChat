@@ -68,7 +68,7 @@ export default function ChatWindow(props) {
         });
         rawList = await Promise.all(
           res.data.map(async (m) => {
-            const plain = await decryptText(m.ciphertext, m.iv, privateKey, currentChat.publicKey);
+            const plain = await decryptText(m.ciphertext, m.iv, privateKey, (resolvedPartnerKey || currentChat.publicKey));
             return { ...m, plaintext: plain };
           })
         );
@@ -93,7 +93,7 @@ export default function ChatWindow(props) {
           fileName,
         };
       } else {
-        const { ciphertext, iv } = await encryptText(rawContent, privateKey, currentChat.publicKey);
+        const { ciphertext, iv } = await encryptText(rawContent, privateKey, (resolvedPartnerKey || currentChat.publicKey));
         payload = {
           senderUsername: currentUser.username,
           receiverUsername: currentChat.username,
@@ -140,6 +140,17 @@ export default function ChatWindow(props) {
     }
   };
   const [deleteMenuMsgId, setDeleteMenuMsgId] = useState(null);
+  const [resolvedPartnerKey, setResolvedPartnerKey] = useState(currentChat?.publicKey || '');
+  useEffect(() => {
+    setResolvedPartnerKey(currentChat?.publicKey || '');
+    if (!isChannel && currentChat?.username && !currentChat?.publicKey) {
+      API.get('/auth/search', { params: { username: currentChat.username } })
+        .then((res) => {
+          if (res.data?.publicKey) setResolvedPartnerKey(res.data.publicKey);
+        })
+        .catch(() => {});
+    }
+  }, [currentChat?.username, currentChat?.publicKey, isChannel]);
   const handleDeleteMessage = async (msgId, mode = 'EVERYONE') => {
     try {
       setDeleteMenuMsgId(null);

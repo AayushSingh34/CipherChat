@@ -786,6 +786,12 @@ export default function App() {
           <RadarView
             currentUser={user}
             friendsMap={friendsMap}
+            onSelectUser={(targetUser) => {
+              selectChat(targetUser, false);
+            }}
+            onFriendAction={() => {
+              fetchSocialData();
+            }}
             onFriendAdded={() => {
               fetchSocialData();
               setActiveTab('chat');
