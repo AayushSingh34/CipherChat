@@ -169,11 +169,11 @@ public class ChatController {
         try {
             String me = username.trim().toLowerCase();
             Set<String> partners = new LinkedHashSet<>();
-            List> rows = jdbcTemplate.queryForList(
+            var rows = jdbcTemplate.queryForList(
                 "SELECT DISTINCT sender_username, receiver_username FROM encrypted_messages WHERE LOWER(sender_username) = ? OR LOWER(receiver_username) = ?",
                 me, me
             );
-            for (Map<String, Object> row : rows) {
+            for (var row : rows) {
                 String s = row.get("sender_username") != null ? String.valueOf(row.get("sender_username")).trim() : "";
                 String r = row.get("receiver_username") != null ? String.valueOf(row.get("receiver_username")).trim() : "";
                 if (s.equalsIgnoreCase(me) && !r.isEmpty()) partners.add(r);
