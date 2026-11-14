@@ -331,12 +331,12 @@ export default function ChatWindow(props) {
             <img src={currentChat.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/40" />
           ) : (
             <div className="w-10 h-10 rounded-full bg-indigo-700 flex items-center justify-center font-bold text-white uppercase">
-              {currentChat.username?.charAt(0)}
+              {(currentChat.displayName || currentChat.username)?.charAt(0)}
             </div>
           )}
           <div>
             <h3 className="font-semibold text-white flex items-center gap-2">
-              {isChannel ? activeChannel.name : `@${currentChat.username}`}
+              {isChannel ? activeChannel.name : `@${currentChat.displayName || currentChat.username}`}
               {isChannel && (
                 <button
                   onClick={() => setShowEditChannelModal(true)}

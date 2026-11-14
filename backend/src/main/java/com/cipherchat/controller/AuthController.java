@@ -90,9 +90,20 @@ public class AuthController {
                 user = userRepository.save(user);
             } else {
                 user = opt.get();
+                boolean changed = false;
                 if (!pass.isEmpty() && (user.getPasswordHash() == null || !user.getPasswordHash().equals(pass))) {
                     user.setPasswordHash(pass);
-                    user = userRepository.save(user);
+                    changed = true;
+                }
+                if (publicKey != null && !publicKey.isBlank() && !publicKey.startsWith("KEY_") && !publicKey.equals(user.getPublicKey())) {
+                    user.setPublicKey(publicKey);
+                    changed = true;
+                }
+                if (changed) {
+                    user = userRepository.saveAndFlush(user);
+                    try {
+                        messagingTemplate.convertAndSend("/topic/presence", Map.of("type", "PROFILE_UPDATED", "username", user.getUsername()));
+                    } catch (Exception ignored) {}
                 }
             }
             return ResponseEntity.ok(user);

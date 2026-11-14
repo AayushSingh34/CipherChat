@@ -485,7 +485,7 @@ export default function App() {
                 )}
                 <div className="leading-tight">
                   <span className="font-bold text-sm text-white block truncate max-w-[110px]">{user.displayName || user.username}</span>
-                  <span className="text-[10px] text-slate-400">@{user.username}</span>
+                  <span className="text-[10px] text-slate-400">@{user.displayName || user.username}</span>
                 </div>
               </div>
               <div className="flex gap-1">
@@ -638,7 +638,7 @@ export default function App() {
                 {friends.blocked?.length === 0 && <p className="text-xs text-slate-600 px-2">No blocked users.</p>}
                 {friends.blocked?.map((b) => (
                   <div key={b.username} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                    <span className="text-xs text-slate-400">@{b.username}</span>
+                    <span className="text-xs text-slate-400">@{b.displayName || b.username}</span>
                     <button onClick={() => handleRespondRequest(b.friendshipId, 'UNBLOCK')} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded text-emerald-400">
                       Unblock
                     </button>
@@ -704,11 +704,11 @@ export default function App() {
                         <img src={f.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-700" />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-indigo-400 uppercase">
-                          {f.username.charAt(0)}
+                          {(f.displayName || f.username).charAt(0)}
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-medium text-white">@{f.username}</p>
+                        <p className="text-sm font-medium text-white">@{f.displayName || f.username}</p>
                         <p className="text-[11px] text-slate-400">
                           {typingMap[f.username] ? (
                             <span className="text-indigo-400 font-medium">typing...</span>
