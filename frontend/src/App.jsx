@@ -89,6 +89,7 @@ export default function App() {
           if (Array.isArray(res.data)) {
             setOnlineUsers(new Set(res.data));
           }
+          fetchSocialData();
         } catch (e) {}
       }, 3000);
       return () => clearInterval(interval);
@@ -231,6 +232,7 @@ export default function App() {
           if (Array.isArray(res.data)) {
             setOnlineUsers(new Set(res.data));
           }
+          fetchSocialData();
         } catch (e) {}
       }, 3000);
       return () => clearInterval(interval);

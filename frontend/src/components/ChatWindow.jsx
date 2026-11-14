@@ -144,8 +144,13 @@ export default function ChatWindow(props) {
   useEffect(() => {
     setFriendReqSent(false);
   }, [currentChat?.username]);
-  const relation = !isChannel && currentChat?.username ? props.friendsMap?.[currentChat.username] : null;
-  const isAcceptedFriend = relation?.status === 'ACCEPTED';
+  const relation = !isChannel && currentChat?.username && props.friendsMap
+    ? Object.values(props.friendsMap).find(
+        (r) => r.username?.toLowerCase() === currentChat.username.toLowerCase()
+      )
+    : null;
+  const isAcceptedFriend =
+    relation?.status === 'ACCEPTED' || currentChat?.status === 'ACCEPTED';
   const isPendingFriend = relation?.status === 'PENDING' || friendReqSent;
   const handleSendFriendFromChat = async () => {
     if (!currentChat?.username) return;
