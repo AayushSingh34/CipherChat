@@ -941,7 +941,7 @@ export default function App() {
                 <img src={avatarPreview} alt="Avatar" className="w-16 h-16 rounded-full object-cover ring-2 ring-indigo-500" />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold uppercase">
-                  {user.username.charAt(0)}
+                  {(user.displayName || user.username).charAt(0)}
                 </div>
               )}
               <label className="text-xs text-indigo-400 hover:underline cursor-pointer">

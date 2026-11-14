@@ -1,34 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../services/api';
 import { sounds } from '../services/soundEffects';
-import { Compass, RefreshCw, UserPlus, Globe, Plus, Hash, Users } from 'lucide-react';
+import { Compass, RefreshCw, UserPlus, Globe, Plus, Hash, Users, MapPin } from 'lucide-react';
 export default function RadarView({ currentUser, onSelectUser, onFriendAction }) {
   const [nearbyUsers, setNearbyUsers] = useState([]);
   const [publicChannels, setPublicChannels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
-  const [coords, setCoords] = useState({ lat: 28.4595, lon: 77.0266 });
-  useEffect(() => {
-    scanExplorer(28.4595, 77.0266);
+  const [locationLabel, setLocationLabel] = useState('Detecting GPS location...');
+  const coordsRef = useRef({ lat: null, lon: null });
+  const resolveLocationAndScan = (manual = false) => {
+    if (!currentUser?.username) return;
+    if (manual) setLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const newCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          setCoords(newCoords);
-          scanExplorer(newCoords.lat, newCoords.lon);
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          coordsRef.current = { lat, lon };
+          setLocationLabel(`GPS Active (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`);
+          scanExplorer(lat, lon, manual);
         },
-        () => {},
-        { timeout: 4000 }
+        () => {
+          setLocationLabel('GPS Permission Denied (Using Network Region)');
+          scanExplorer(coordsRef.current.lat, coordsRef.current.lon, manual);
+        },
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
       );
+    } else {
+      setLocationLabel('GPS Unavailable (Using Network Region)');
+      scanExplorer(null, null, manual);
     }
+  };
+  useEffect(() => {
+    resolveLocationAndScan(true);
+    const interval = setInterval(() => {
+      scanExplorer(coordsRef.current.lat, coordsRef.current.lon, false);
+    }, 3000);
+    return () => clearInterval(interval);
   }, [currentUser?.username]);
-  const scanExplorer = async (lat = coords.lat, lon = coords.lon) => {
+  const scanExplorer = async (lat = coordsRef.current.lat, lon = coordsRef.current.lon, showSpinner = false) => {
     if (!currentUser?.username) return;
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     try {
-      const nearbyRes = await API.get('/discovery/nearby', {
-        params: { username: currentUser.username, lat, lon, radiusKm: 50000 },
-      });
+      const params = { username: currentUser.username, radiusKm: 50000 };
+      if (lat !== null && lon !== null) {
+        params.lat = lat;
+        params.lon = lon;
+      }
+      const nearbyRes = await API.get('/discovery/nearby', { params });
       setNearbyUsers(Array.isArray(nearbyRes.data) ? nearbyRes.data : []);
     } catch (err) {
       console.error('Nearby users scan error:', err);
@@ -41,16 +61,22 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
     } catch (err) {
       console.error('Channels scan error:', err);
     }
-    setLoading(false);
+    if (showSpinner) setLoading(false);
   };
-  const handleSendFriendRequest = async (targetUser) => {
+  const formatDistance = (distKm) => {
+    if (distKm === undefined || distKm === null) return 'Nearby';
+    if (distKm < 0.1) return 'Within 100m';
+    if (distKm < 1) return `${Math.round(distKm * 1000)}m away`;
+    return `${distKm.toFixed(1)} km away`;
+  };
+  const handleSendFriendRequest = async (targetUser, displayName) => {
     try {
       await API.post('/friends/request', {
         requester: currentUser.username,
         addressee: targetUser,
       });
       sounds?.playAccept?.();
-      setStatusMsg(`Friend request sent to @${targetUser}!`);
+      setStatusMsg(`Friend request sent to ${displayName || targetUser}!`);
       onFriendAction?.();
       setTimeout(() => setStatusMsg(''), 3000);
     } catch (err) {
@@ -70,7 +96,7 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
         setStatusMsg(`Joined #${ch.name}!`);
       }
       onFriendAction?.();
-      scanExplorer();
+      scanExplorer(coordsRef.current.lat, coordsRef.current.lon, false);
       setTimeout(() => setStatusMsg(''), 3000);
     } catch {
       alert('Failed to join channel');
@@ -85,14 +111,15 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">Encrypted Node Explorer</h2>
-            <p className="text-xs text-slate-400">
-              Discover active users, groups & communities without sharing phone numbers
+            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+              <MapPin size={12} className="text-emerald-400" />
+              <span>{locationLabel}</span>
             </p>
           </div>
         </div>
         <button
           type="button"
-          onClick={() => scanExplorer()}
+          onClick={() => resolveLocationAndScan(true)}
           className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white flex items-center gap-2 transition cursor-pointer shadow-lg shadow-indigo-600/20"
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -111,44 +138,47 @@ export default function RadarView({ currentUser, onSelectUser, onFriendAction })
         </h3>
         {nearbyUsers.length === 0 ? (
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 text-center text-xs text-slate-500">
-            No other visible users right now. Ask a friend to register or turn off Ghost Mode!
+            No other visible users right now. Users in Ghost Mode are hidden from Radar.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {nearbyUsers.map((u) => (
-              <div
-                key={u.username}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-500/50 transition"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300 uppercase">
-                    {u.username.charAt(0)}
+            {nearbyUsers.map((u) => {
+              const shownName = u.displayName || u.username;
+              return (
+                <div
+                  key={u.username}
+                  className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-500/50 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300 uppercase">
+                      {shownName.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{shownName}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {formatDistance(u.distanceKm)} • {u.strictPrivacy ? '🔒 Friends-Only DM' : '🌐 Open DM'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">@{u.username}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {u.distanceKm} km away • {u.strictPrivacy ? '🔒 Friends-Only DM' : '🌐 Open DM'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!u.strictPrivacy && onSelectUser && (
+                  <div className="flex items-center gap-2">
+                    {!u.strictPrivacy && onSelectUser && (
+                      <button
+                        onClick={() => onSelectUser(u)}
+                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-indigo-300 cursor-pointer"
+                      >
+                        Chat
+                      </button>
+                    )}
                     <button
-                      onClick={() => onSelectUser(u)}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-indigo-300 cursor-pointer"
+                      onClick={() => handleSendFriendRequest(u.username, shownName)}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white flex items-center gap-1 cursor-pointer"
                     >
-                      Chat
+                      <UserPlus size={13} /> Add
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleSendFriendRequest(u.username)}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    <UserPlus size={13} /> Add
-                  </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
