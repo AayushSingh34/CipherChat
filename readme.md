@@ -140,3 +140,18 @@ Right from the left sidebar, toggle two real-time privacy switches anytime:
 * **Unfriend or Block:** Open any DM, click the top-right **`⋮`** menu, and select **Unfriend** or **Block User**. Blocked contacts are moved to the **Blocked List (🛡️)** tab, where you can unblock them anytime.
 * **Group Admin Controls:** Group and Community creators can approve/reject join requests, edit channel details, remove/block members, or permanently **Delete** the channel.
 * **Profile & Themes:** Click the bottom-left **Settings (⚙️)** button to update your **Display Name**, upload a **Profile Picture**, or switch your **Chat Wallpaper & Theme**.
+
+## ⚡ Quick Start (Run Locally)
+
+### Prerequisites
+Make sure you have the following installed:
+* **Java 17+** & **Maven 3.9+**
+* **Node.js 18+** & **npm**
+* A **PostgreSQL** database (e.g., [Neon](https://neon.tech/) free tier or local PostgreSQL)
+
+---
+
+### 1. Clone the Repository
+```bash
+git clone <your-repository-url>
+cd "Numberless fully - encrypted - based Chat system"
