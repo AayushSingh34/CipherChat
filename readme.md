@@ -2,26 +2,26 @@
 
 CipherChat is a modern, privacy-first communication platform that operates without requiring phone numbers, SIM cards, or centralized identity linkage. Built with **Java Spring Boot**, **React (Vite)**, and **WebSockets**, it provides high-security peer-to-peer style messaging, group circles, and open communities with full client-side encryption and admin moderation workflows.
 
-## Core Features
+## ✨ Core Features
 
-* **Zero-Phone-Number Onboarding:** Strict registration and login using a unique username, passphrase, and optional custom security question/answer for account recovery.
-* **Client-Side End-to-End Encryption (E2EE):** Uses the browser's **Web Crypto API (ECDH + AES-256-GCM)** to derive shared secrets locally. Private keys never leave the user's device; public keys sync automatically on login.
-* **Encrypted Node Explorer (GPS Radar):** Discovers nearby users using the browser's Geolocation API and calculates real-world distances on the backend using the **Haversine formula**.
-* **Radar Visible vs. Ghost Mode:**
-  * **Radar Visible:** Your profile and approximate distance appear on nearby users' Radar.
-  * **Ghost Mode:** Immediately hides your profile from everyone else's Radar while keeping existing friend chats active.
-* **Open DMs vs. Friends Only:**
-  * **Open DMs:** Anyone who finds you on Radar can message you immediately. Incoming non-friend chats appear in the recipient's sidebar with an **Open DM banner** and a one-click **Send Friend Request** button.
-  * **Friends Only:** Blocks unsolicited DMs; users must send a friend request and wait for acceptance.
-* **Granular Message Deletion:**
-  * **Delete for Me:** Hides a message permanently from your own view while leaving it intact for the other participant.
-  * **Delete for Everyone:** Permanently removes the message from PostgreSQL and broadcasts a deletion event to all screens.
-* **Moderation & Privacy Controls:** One-click **Unfriend**, **Block / Unblock** (with a dedicated Blocked Users tab), and **Groups & Communities** with join approvals, member removal/blocking, and **Admin Delete**.
-* **Rich Media & Customization:** Supports encrypted text, images, file attachments, voice notes, typing indicators, live online presence, profile photo/display name updates, and custom chat wallpapers/themes.
-* **Accurate Local Timezones:** All message timestamps are stored in ISO-8601 UTC on the server and automatically converted to the viewer's local device clock.
+### 🔐 Security & Zero-Knowledge Privacy
+* **Anonymous Onboarding:** Sign up with just a username, passphrase, and custom security question—no phone number or email required.
+* **Client-Side E2EE:** Derives shared secrets locally via **Web Crypto API (`ECDH` + `AES-256-GCM`)**; private keys never leave your device.
+* **Granular Message Deletion:** Choose **Delete for Me** (local hide) or **Delete for Everyone** (permanent database wipe + live screen sync).
 
----
-```
+### 📡 Location Radar & Discovery
+* **GPS Node Explorer:** Discovers nearby users using the Browser Geolocation API and server-side **Haversine** distance math.
+* **Radar Visible vs. Ghost Mode:** Toggle public proximity visibility on or off anytime without interrupting active friend chats.
+* **Open DMs vs. Friends Only:** Accept instant messages from nearby users with a one-click **Send Friend Request** banner, or lock DMs to approved friends only.
+
+### 💬 Rich Real-Time Messaging
+* **Encrypted Multimedia:** Send E2EE text, images, files, and voice notes with live typing indicators and online presence.
+* **Personalization & Local Time:** Customize chat themes, wallpapers, and profile avatars, with automatic UTC-to-local device timestamp conversion.
+
+### 🛡️ Social & Community Moderation
+* **User & Group Controls:** Manage **Friends**, **Blocked Users**, and **Communities** with join approvals, member moderation, and **Admin Delete**.
+
+
 ## 🏗️ System Architecture
 
 ```mermaid
