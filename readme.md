@@ -170,8 +170,8 @@ Open a terminal in the project root:
 cd backend
 mvn clean spring-boot:run
 ```
-> [!NOTE]
-> Backend runs at `http://localhost:8080`
+> [!Backend runs at]
+> `http://localhost:8080`
 
 ### 4. Start the Frontend (React + Vite)
 Open a second terminal in the project root:
