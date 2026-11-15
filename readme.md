@@ -1,21 +1,61 @@
 # 🔒 CipherChat: Zero-Phone End-to-End Encrypted (E2EE) Chat System
 
 CipherChat is a modern, privacy-first communication platform that operates without requiring phone numbers, SIM cards, or centralized identity linkage. Built with **Java Spring Boot**, **React (Vite)**, and **WebSockets**, it provides high-security peer-to-peer style messaging, group circles, and open communities with full client-side encryption and admin moderation workflows.
+---
+
+## Core Features
+
+* **Zero-Phone-Number Onboarding:** Strict registration and login using a unique username, passphrase, and optional custom security question/answer for account recovery.
+* **Client-Side End-to-End Encryption (E2EE):** Uses the browser's **Web Crypto API (ECDH + AES-256-GCM)** to derive shared secrets locally. Private keys never leave the user's device; public keys sync automatically on login.
+* **Encrypted Node Explorer (GPS Radar):** Discovers nearby users using the browser's Geolocation API and calculates real-world distances on the backend using the **Haversine formula**.
+* **Radar Visible vs. Ghost Mode:**
+  * **Radar Visible:** Your profile and approximate distance appear on nearby users' Radar.
+  * **Ghost Mode:** Immediately hides your profile from everyone else's Radar while keeping existing friend chats active.
+* **Open DMs vs. Friends Only:**
+  * **Open DMs:** Anyone who finds you on Radar can message you immediately. Incoming non-friend chats appear in the recipient's sidebar with an **Open DM banner** and a one-click **Send Friend Request** button.
+  * **Friends Only:** Blocks unsolicited DMs; users must send a friend request and wait for acceptance.
+* **Granular Message Deletion:**
+  * **Delete for Me:** Hides a message permanently from your own view while leaving it intact for the other participant.
+  * **Delete for Everyone:** Permanently removes the message from PostgreSQL and broadcasts a deletion event to all screens.
+* **Moderation & Privacy Controls:** One-click **Unfriend**, **Block / Unblock** (with a dedicated Blocked Users tab), and **Groups & Communities** with join approvals, member removal/blocking, and **Admin Delete**.
+* **Rich Media & Customization:** Supports encrypted text, images, file attachments, voice notes, typing indicators, live online presence, profile photo/display name updates, and custom chat wallpapers/themes.
+* **Accurate Local Timezones:** All message timestamps are stored in ISO-8601 UTC on the server and automatically converted to the viewer's local device clock.
 
 ---
 
-## 🌟 Key Features
+## System Workflow
 
-* **Zero Phone Numbers / SIM Cards Required:** Instant username and secure passphrase registration.
-* **True End-to-End Encryption (E2EE):** Messages, photos, and files are encrypted in-browser using **AES-256-GCM** before touching the server.
-* **Voice Note Recording (`AUDIO`):** Built-in browser `MediaRecorder` API allowing instant recording, sending, and playback of voice messages across personal, group, and community chats.
-* **Groups & Open Communities:** Support for public and private channels with admin approval workflows, member moderation, and block/unblock controls.
-* **Live Presence & Typing Indicators:** Real-time online status tracking and typing notifications over STOMP WebSockets.
-* **Custom Chat Wallpaper & Themes:** Personal theme customizer with system wallpaper upload support.
-* **Message & File Deletion:** Ability to delete sent messages, files, photos, or voice notes for everyone in real time.
-* **E2EE Key Backups:** Export and import local cryptographic identity keys as `.json` backups.
-
----
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 1. AUTH & KEY GENERATION (Browser)                                      │
+│    Register/Login ──► Web Crypto API generates ECDH Keypair             │
+│    • Private Key stays in Browser Storage                               │
+│    • Public Key sent to POST /api/auth/register or /api/auth/login      │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 2. DISCOVERY & PRESENCE (Real-Time + 3s Polling)                        │
+│    • STOMP WebSocket connects + 3s HTTP heartbeat updates online status │
+│    • GPS coordinates sent to GET /api/discovery/nearby (Haversine)      │
+│    • Ghost Mode (discoverable=false) strictly excluded from results     │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 3. END-TO-END ENCRYPTED MESSAGING                                       │
+│    [Sender Browser]                                                     │
+│      Derives AES-256-GCM key (Sender PrivKey + Receiver PubKey)         │
+│      Encrypts message with random IV ──► POST /api/chat/send            │
+│                                                                         │
+│    [Spring Boot Backend + Neon PostgreSQL]                              │
+│      Saves { ciphertext, iv, UTC timestamp } (Server sees NO plaintext) │
+│      Broadcasts via STOMP WebSocket to /topic/chat/{receiver}           │
+│                                                                         │
+│    [Receiver Browser]                                                   │
+│      Derives identical AES key (Receiver PrivKey + Sender PubKey)       │
+│      Decrypts locally & converts UTC timestamp to local device time     │
+└─────────────────────────────────────────────────────────────────────────┘
 
 ## ⚙️ System Architecture
 
