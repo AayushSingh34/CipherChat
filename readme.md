@@ -170,16 +170,21 @@ Open a terminal in the project root:
 cd backend
 mvn clean spring-boot:run
 ```
-> [!Backend runs at]
-> `http://localhost:8080`
+> [!IMPORTANT]
+> Backend runs at.. `http://localhost:8080`
 
 ### 4. Start the Frontend (React + Vite)
-Open a second terminal in the project root:
+
+Open a **second terminal** in the project root:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+> *Frontend runs at `http://localhost:5173` — open this URL in your browser to start chatting!*
+
 ### 🐳 Run with Docker (Single Command)
 If you have Docker installed, you can build and run the entire full-stack app (Frontend + Backend combined) in one container:
 ```bash
