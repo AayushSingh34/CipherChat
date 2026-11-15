@@ -93,41 +93,50 @@ Numberless fully - encrypted - based Chat system/
 ├── Dockerfile               # Multi-stage production container build
 └── README.md                # Project documentation
 ```
-🔄 Project Workflow
-Authentication: User registers a username and passphrase. The browser generates local cryptographic identity keys via the WebCrypto API.
+## 🚀 How to Use CipherChat
 
-Discovery & Connection: Users can toggle radar visibility to discover nearby encrypted nodes or add friends directly via username.
+Follow this quick guide to get started with **CipherChat**—no phone number or email required.
 
-E2EE Messaging:
+---
 
-Personal DMs: Messages are encrypted locally using a shared secret derived from recipient public keys before transmission.
+### 1. 🔐 Create Your Anonymous Identity
+1. Open the application and switch to the **Register** tab.
+2. Enter a unique **Username** and a strong **Passphrase**.
+3. *(Optional)* Add a custom **Security Question & Answer** so you can recover your account later without a phone number.
+4. Click **Register**. Your browser automatically generates a local **ECDH / AES-256-GCM** encryption keypair—your private key never leaves your device.
 
-Channels (Groups/Communities): Messages are broadcast securely to all active channel members.
+> **Note:** Returning users must log in with their registered credentials. Unregistered usernames or incorrect passphrases are blocked with an on-screen alert.
 
-Real-time Delivery: STOMP WebSockets instantly route messages, typing statuses, and presence updates to connected clients.
+---
 
-🚀 Getting Started & Instructions to Use
-Prerequisites
-Java 21 (or compatible JDK)
+### 2. 🛡️ Configure Your Privacy Controls
+Right from the left sidebar, toggle two real-time privacy switches anytime:
 
-Node.js (v18+) and npm
+| Control | Mode A | Mode B |
+| :--- | :--- | :--- |
+| **Visibility** | **👁️ Radar Visible** — Appear on nearby users' GPS Radar with approximate distance. | **👻 Ghost Mode** — Instantly hide your profile from everyone's Radar. |
+| **Messaging** | **🌐 Open DMs** — Anyone who finds you on Radar can message you immediately. | **🔒 Friends Only** — Strangers must send a friend request and wait for acceptance. |
 
-Maven (Included via wrapper or local installation)
-Local Development Setup
-1. Start the Backend Server
-Open a terminal in the backend folder and run:
+---
 
-PowerShell
-.\apache-maven-3.9.6\bin\mvn.cmd clean spring-boot:run
-(The Spring Boot server will start on port 8080 with an embedded file-backed H2 database).
+### 3. 🧭 Discover People, Groups & Communities
+* **GPS Radar (Compass Icon):** Click the **Compass** icon to open the **Encrypted Node Explorer**. Allow location access to scan nearby discoverable users (with live distance) and browse public **Groups & Communities**.
+* **Direct Search:** Use the **Search friend by username...** bar in the sidebar to locate a specific user and send a friend request.
+* **Create a Space:** Switch to the **Groups** or **Communities** tab in the sidebar to create your own public or private channel.
 
-2. Start the Frontend Development Server
-Open a second terminal in the frontend folder and run:
+---
 
-PowerShell
-npm install
-npm run dev
-(Vite will spin up the frontend on http://localhost:5173 with automatic API and WebSocket proxying).
+### 4. 💬 Start Encrypted Conversations
+* **Direct Messages:** Click any accepted friend in your **Personal** list to chat.
+* **Open DM Threads:** If you message an **Open DM** user from Radar without being friends, the chat opens immediately for both users with an **Open DM banner** and a one-click **Send Friend Request** button.
+* **Rich Media:** Send encrypted text, images, file attachments, and voice notes directly from the chat input bar.
+* **Message Deletion:** Hover over any message and click the **Trash (🗑️)** icon to choose:
+  * **Delete for Me** — Removes the message from your screen only.
+  * **Delete for Everyone** — Permanently erases the message for all participants.
 
-3. Open in Browser
-Navigate to http://localhost:5173 in your browser, register two separate user accounts (e.g., in two separate browser windows/incognito), add each other as friends, and start chatting securely!
+---
+
+### 5. ⚙️ Manage Contacts, Groups & Profile
+* **Unfriend or Block:** Open any DM, click the top-right **`⋮`** menu, and select **Unfriend** or **Block User**. Blocked contacts are moved to the **Blocked List (🛡️)** tab, where you can unblock them anytime.
+* **Group Admin Controls:** Group and Community creators can approve/reject join requests, edit channel details, remove/block members, or permanently **Delete** the channel.
+* **Profile & Themes:** Click the bottom-left **Settings (⚙️)** button to update your **Display Name**, upload a **Profile Picture**, or switch your **Chat Wallpaper & Theme**.
