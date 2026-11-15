@@ -56,15 +56,38 @@ CipherChat is a modern, privacy-first communication platform that operates witho
 │      Decrypts locally & converts UTC timestamp to local device time     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
-## 🛠️ Technology Stack
+## 🏗️ System Architecture
 
-* **Frontend:** **React 18**, **Vite**, **Tailwind CSS**, **Axios**, and **Lucide React** — Builds a responsive dark-mode SPA with custom chat themes and fast production bundles.
-* **Backend:** **Java 17**, **Spring Boot 3**, and **Maven** — Powers RESTful endpoints for authentication, profiles, friendships, channels, and discovery.
-* **Real-Time Messaging:** **STOMP over WebSockets** with **HTTP Polling** fallback — Handles instant chat delivery, typing indicators, and live user presence.
-* **Security & E2EE:** **Web Crypto API (`ECDH` + `AES-256-GCM`)** — Executes client-side key exchange and authenticated encryption so the server only stores ciphertext.
-* **Database:** **PostgreSQL (Neon Serverless)**, **Spring Data JPA**, and **`JdbcTemplate`** — Pairs ORM models with low-memory native SQL queries over SSL.
-* **Geo-Discovery:** **Browser Geolocation API** & **Haversine Formula** — Captures GPS coordinates on the client to calculate nearby user distances on the backend.
-* **Deployment:** **Multi-Stage Docker** & **Render** — Packages frontend static assets directly into the Spring Boot JAR, tuned for low-RAM containers (`-Xmx320m -XX:+UseSerialGC`).
+```mermaid
+flowchart LR
+    subgraph Client ["🖥️ Client (React 18 + Vite)"]
+        UI["Dark-Mode SPA & Radar UI"]
+        Crypto["🔐 Web Crypto API\n(ECDH + AES-256-GCM)"]
+        Geo["📍 Geolocation API"]
+    end
+
+    subgraph Server ["⚙️ Docker Container (Spring Boot 3 / JVM -Xmx320m)"]
+        WS["⚡ STOMP WebSocket Broker\n(+ HTTP Polling Fallback)"]
+        REST["🔌 REST Controllers\n(/auth, /chat, /friends, /discovery)"]
+        Haversine["🧭 Haversine Distance Engine"]
+        JPA["🗄️ Spring Data JPA + JdbcTemplate"]
+    end
+
+    subgraph CloudDB ["☁️ Neon Serverless"]
+        DB[("🐘 PostgreSQL (SSL)\nUsers, Ciphertexts & Channels")]
+    end
+
+    UI <-->|"Plaintext (Local Only)"| Crypto
+    Crypto <-->|"Encrypted Ciphertext"| WS
+    Crypto <-->|"Encrypted Ciphertext"| REST
+    Geo -->|"GPS Coordinates"| REST
+    REST --> Haversine
+    WS <--> JPA
+    REST <--> JPA
+    Haversine <--> JPA
+    JPA <-->|"SSL Connection"| DB
+```
+
 
 
 ## 📂 Project Structure
