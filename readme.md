@@ -55,15 +55,21 @@ CipherChat is a modern, privacy-first communication platform that operates witho
 │      Derives identical AES key (Receiver PrivKey + Sender PubKey)       │
 │      Decrypts locally & converts UTC timestamp to local device time     │
 └─────────────────────────────────────────────────────────────────────────┘
+```
+## Technology Stack
 
-Layer,Technology,Purpose
-Frontend,"React (Vite), Tailwind CSS, Lucide Icons, Axios","Responsive SPA interface, chat window, Radar explorer, themes, and state management."
-Backend,"Java 17, Spring Boot 3","REST APIs (/api/auth, /api/chat, /api/friends, /api/discovery, /api/channels) and WebSocket message broker."
-Real-Time,STOMP over WebSockets + HTTP REST Fallback,"Instant push delivery, typing status, and presence, backed by HTTP POST /api/chat/send and polling for proxy resilience."
-Cryptography,Web Crypto API (ECDH + AES-256-GCM),Browser-native asymmetric key exchange and authenticated symmetric encryption.
-Database,PostgreSQL (Neon Serverless),"Cloud-hosted relational storage for users, ciphertexts, friendships, and channels."
-Data Access,Spring Data JPA (Hibernate) + JdbcTemplate,ORM entity management + low-memory native SQL queries (SELECT DISTINCT) for free-tier RAM efficiency.
-Deployment,Multi-Stage Docker + Render,"Compiles React into static assets, packages Spring Boot JAR, and runs inside a memory-capped JVM (-Xmx320m -XX:+UseSerialGC)."
+| Category | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | React 18, Vite | Single-page application (SPA) UI and fast development/production bundling. |
+| **Styling & Icons** | Tailwind CSS, Lucide React | Responsive dark-mode UI, custom chat themes/wallpapers, and vector icons. |
+| **HTTP Client** | Axios | REST API communication for authentication, profiles, friendships, and chat fallback. |
+| **Backend** | Java 17, Spring Boot 3, Maven | RESTful APIs (`/api/auth`, `/api/chat`, `/api/friends`, `/api/discovery`, `/api/channels`) and core business logic. |
+| **Real-Time Messaging** | STOMP over WebSockets + HTTP Polling | Instant message delivery, typing indicators, and live presence with automatic HTTP fallback. |
+| **Cryptography (E2EE)** | Web Crypto API (ECDH + AES-256-GCM) | Client-side asymmetric keypair generation, shared secret derivation, and authenticated message encryption. |
+| **Database** | PostgreSQL (Neon Serverless) | Cloud-hosted relational database storing users, encrypted ciphertexts, friendships, and channels over SSL. |
+| **Data Access** | Spring Data JPA (Hibernate) + `JdbcTemplate` | ORM entity management combined with lightweight native SQL (`SELECT DISTINCT`) for low-memory queries. |
+| **Location & Radar** | Browser Geolocation API + Haversine Formula | Captures GPS coordinates on the client and calculates real-world distances on the backend. |
+| **Deployment & DevOps** | Docker (Multi-Stage) + Render | Builds React into static assets, packages the Spring Boot JAR, and runs in a memory-tuned JVM (`-Xmx320m -XX:+UseSerialGC`). |
 
 ## 📂 Project Structure
 
