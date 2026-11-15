@@ -58,23 +58,13 @@ CipherChat is a modern, privacy-first communication platform that operates witho
 ```
 ## 🛠️ Technology Stack
 
-![React](https://shields.io)
-![Vite](https://shields.io)
-![Tailwind CSS](https://shields.io)
-![Java 17](https://shields.io)
-![Spring Boot 3](https://shields.io)
-![PostgreSQL](https://shields.io)
-![Docker](https://shields.io)
-
-| Layer | Technologies | Architectural Role |
-| :--- | :--- | :--- |
-| **Frontend** | React 18, Vite, Tailwind CSS, Lucide, Axios | Responsive dark-mode SPA with custom chat themes, fast bundling, and REST client integration. |
-| **Backend** | Java 17, Spring Boot 3, Maven | Modular REST APIs (`/auth`, `/chat`, `/friends`, `/discovery`, `/channels`) and core business logic. |
-| **Real-Time Engine** | STOMP over WebSockets + HTTP Polling | Instant message delivery, typing indicators, and live presence with automatic HTTP fallback. |
-| **End-to-End Encryption** | Web Crypto API (`ECDH` + `AES-256-GCM`) | Client-side asymmetric keypair generation, shared secret derivation, and authenticated encryption. |
-| **Database & Persistence** | PostgreSQL (Neon), Spring Data JPA, `JdbcTemplate` | SSL cloud persistence combining ORM entity management with lightweight native SQL for low-memory queries. |
-| **Location & Radar** | Browser Geolocation API + Haversine Formula | Client-side GPS capture paired with server-side spherical distance calculation for nearby discovery. |
-| **DevOps & Deployment** | Multi-Stage Docker, Render | Bundles React into the Spring Boot JAR and runs in a memory-constrained JVM (`-Xmx320m -XX:+UseSerialGC`). |
+* **Frontend:** **React 18**, **Vite**, **Tailwind CSS**, **Axios**, and **Lucide React** — Builds a responsive dark-mode SPA with custom chat themes and fast production bundles.
+* **Backend:** **Java 17**, **Spring Boot 3**, and **Maven** — Powers RESTful endpoints for authentication, profiles, friendships, channels, and discovery.
+* **Real-Time Messaging:** **STOMP over WebSockets** with **HTTP Polling** fallback — Handles instant chat delivery, typing indicators, and live user presence.
+* **Security & E2EE:** **Web Crypto API (`ECDH` + `AES-256-GCM`)** — Executes client-side key exchange and authenticated encryption so the server only stores ciphertext.
+* **Database:** **PostgreSQL (Neon Serverless)**, **Spring Data JPA**, and **`JdbcTemplate`** — Pairs ORM models with low-memory native SQL queries over SSL.
+* **Geo-Discovery:** **Browser Geolocation API** & **Haversine Formula** — Captures GPS coordinates on the client to calculate nearby user distances on the backend.
+* **Deployment:** **Multi-Stage Docker** & **Render** — Packages frontend static assets directly into the Spring Boot JAR, tuned for low-RAM containers (`-Xmx320m -XX:+UseSerialGC`).
 
 
 ## 📂 Project Structure
