@@ -56,20 +56,26 @@ CipherChat is a modern, privacy-first communication platform that operates witho
 │      Decrypts locally & converts UTC timestamp to local device time     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
-## Technology Stack
+## 🛠️ Technology Stack
 
-| Category | Technology | Purpose |
+![React](https://shields.io)
+![Vite](https://shields.io)
+![Tailwind CSS](https://shields.io)
+![Java 17](https://shields.io)
+![Spring Boot 3](https://shields.io)
+![PostgreSQL](https://shields.io)
+![Docker](https://shields.io)
+
+| Layer | Technologies | Architectural Role |
 | :--- | :--- | :--- |
-| **Frontend** | React 18, Vite | Single-page application (SPA) UI and fast development/production bundling. |
-| **Styling & Icons** | Tailwind CSS, Lucide React | Responsive dark-mode UI, custom chat themes/wallpapers, and vector icons. |
-| **HTTP Client** | Axios | REST API communication for authentication, profiles, friendships, and chat fallback. |
-| **Backend** | Java 17, Spring Boot 3, Maven | RESTful APIs (`/api/auth`, `/api/chat`, `/api/friends`, `/api/discovery`, `/api/channels`) and core business logic. |
-| **Real-Time Messaging** | STOMP over WebSockets + HTTP Polling | Instant message delivery, typing indicators, and live presence with automatic HTTP fallback. |
-| **Cryptography (E2EE)** | Web Crypto API (ECDH + AES-256-GCM) | Client-side asymmetric keypair generation, shared secret derivation, and authenticated message encryption. |
-| **Database** | PostgreSQL (Neon Serverless) | Cloud-hosted relational database storing users, encrypted ciphertexts, friendships, and channels over SSL. |
-| **Data Access** | Spring Data JPA (Hibernate) + `JdbcTemplate` | ORM entity management combined with lightweight native SQL (`SELECT DISTINCT`) for low-memory queries. |
-| **Location & Radar** | Browser Geolocation API + Haversine Formula | Captures GPS coordinates on the client and calculates real-world distances on the backend. |
-| **Deployment & DevOps** | Docker (Multi-Stage) + Render | Builds React into static assets, packages the Spring Boot JAR, and runs in a memory-tuned JVM (`-Xmx320m -XX:+UseSerialGC`). |
+| **Frontend** | React 18, Vite, Tailwind CSS, Lucide, Axios | Responsive dark-mode SPA with custom chat themes, fast bundling, and REST client integration. |
+| **Backend** | Java 17, Spring Boot 3, Maven | Modular REST APIs (`/auth`, `/chat`, `/friends`, `/discovery`, `/channels`) and core business logic. |
+| **Real-Time Engine** | STOMP over WebSockets + HTTP Polling | Instant message delivery, typing indicators, and live presence with automatic HTTP fallback. |
+| **End-to-End Encryption** | Web Crypto API (`ECDH` + `AES-256-GCM`) | Client-side asymmetric keypair generation, shared secret derivation, and authenticated encryption. |
+| **Database & Persistence** | PostgreSQL (Neon), Spring Data JPA, `JdbcTemplate` | SSL cloud persistence combining ORM entity management with lightweight native SQL for low-memory queries. |
+| **Location & Radar** | Browser Geolocation API + Haversine Formula | Client-side GPS capture paired with server-side spherical distance calculation for nearby discovery. |
+| **DevOps & Deployment** | Multi-Stage Docker, Render | Bundles React into the Spring Boot JAR and runs in a memory-constrained JVM (`-Xmx320m -XX:+UseSerialGC`). |
+
 
 ## 📂 Project Structure
 
