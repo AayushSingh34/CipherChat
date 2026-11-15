@@ -56,17 +56,15 @@ CipherChat is a modern, privacy-first communication platform that operates witho
 │      Decrypts locally & converts UTC timestamp to local device time     │
 └─────────────────────────────────────────────────────────────────────────┘
 
-## ⚙️ System Architecture
+Layer,Technology,Purpose
+Frontend,"React (Vite), Tailwind CSS, Lucide Icons, Axios","Responsive SPA interface, chat window, Radar explorer, themes, and state management."
+Backend,"Java 17, Spring Boot 3","REST APIs (/api/auth, /api/chat, /api/friends, /api/discovery, /api/channels) and WebSocket message broker."
+Real-Time,STOMP over WebSockets + HTTP REST Fallback,"Instant push delivery, typing status, and presence, backed by HTTP POST /api/chat/send and polling for proxy resilience."
+Cryptography,Web Crypto API (ECDH + AES-256-GCM),Browser-native asymmetric key exchange and authenticated symmetric encryption.
+Database,PostgreSQL (Neon Serverless),"Cloud-hosted relational storage for users, ciphertexts, friendships, and channels."
+Data Access,Spring Data JPA (Hibernate) + JdbcTemplate,ORM entity management + low-memory native SQL queries (SELECT DISTINCT) for free-tier RAM efficiency.
+Deployment,Multi-Stage Docker + Render,"Compiles React into static assets, packages Spring Boot JAR, and runs inside a memory-capped JVM (-Xmx320m -XX:+UseSerialGC)."
 
-CipherChat uses a decoupled full-stack architecture running inside a unified container:cipher-chat-project/
-[React + Vite Frontend (SPA)]
-│ (REST API & WebSocket / STOMP over /ws)
-▼
-[Spring Boot (v3.2.5) Backend Container]
-│
-├─► REST Controllers (Auth, Friends, Channels)
-├─► WebSocket Message Broker (/topic/messages, /topic/presence)
-└─► Embedded H2 Database (File-backed under /data/cipherchat_db)
 ## 📂 Project Structure
 
 ```text
