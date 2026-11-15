@@ -1,7 +1,6 @@
 # 🔒 CipherChat: Zero-Phone End-to-End Encrypted (E2EE) Chat System
 
 CipherChat is a modern, privacy-first communication platform that operates without requiring phone numbers, SIM cards, or centralized identity linkage. Built with **Java Spring Boot**, **React (Vite)**, and **WebSockets**, it provides high-security peer-to-peer style messaging, group circles, and open communities with full client-side encryption and admin moderation workflows.
----
 
 ## Core Features
 
