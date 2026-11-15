@@ -182,11 +182,11 @@ cd frontend
 npm install
 npm run dev
 ```
-
-> *Frontend runs at `http://localhost:5173` — open this URL in your browser to start chatting!*
+> [!TIP]
+> Frontend runs at `http://localhost:5173` — open this URL in your browser to start chatting!
 
 ### 🐳 Run with Docker (Single Command)
-If you have Docker installed, you can build and run the entire full-stack app (Frontend + Backend combined) in one container:
+If you have **Docker** installed, you can build and run the entire full-stack app (Frontend + Backend combined) in one container:
 ```bash
 # 1. Build the image
 docker build -t cipherchat .
@@ -198,3 +198,6 @@ docker run -p 8080:8080 \
   -e SPRING_DATASOURCE_PASSWORD="<your-db-password>" \
   cipherchat
 ```
+> [!NOTE]
+> Access the full app at `http://localhost:8080`
+
