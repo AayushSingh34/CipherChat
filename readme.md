@@ -21,40 +21,6 @@ CipherChat is a modern, privacy-first communication platform that operates witho
 * **Accurate Local Timezones:** All message timestamps are stored in ISO-8601 UTC on the server and automatically converted to the viewer's local device clock.
 
 ---
-
-## System Workflow
-
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 1. AUTH & KEY GENERATION (Browser)                                      │
-│    Register/Login ──► Web Crypto API generates ECDH Keypair             │
-│    • Private Key stays in Browser Storage                               │
-│    • Public Key sent to POST /api/auth/register or /api/auth/login      │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 2. DISCOVERY & PRESENCE (Real-Time + 3s Polling)                        │
-│    • STOMP WebSocket connects + 3s HTTP heartbeat updates online status │
-│    • GPS coordinates sent to GET /api/discovery/nearby (Haversine)      │
-│    • Ghost Mode (discoverable=false) strictly excluded from results     │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 3. END-TO-END ENCRYPTED MESSAGING                                       │
-│    [Sender Browser]                                                     │
-│      Derives AES-256-GCM key (Sender PrivKey + Receiver PubKey)         │
-│      Encrypts message with random IV ──► POST /api/chat/send            │
-│                                                                         │
-│    [Spring Boot Backend + Neon PostgreSQL]                              │
-│      Saves { ciphertext, iv, UTC timestamp } (Server sees NO plaintext) │
-│      Broadcasts via STOMP WebSocket to /topic/chat/{receiver}           │
-│                                                                         │
-│    [Receiver Browser]                                                   │
-│      Derives identical AES key (Receiver PrivKey + Sender PubKey)       │
-│      Decrypts locally & converts UTC timestamp to local device time     │
-└─────────────────────────────────────────────────────────────────────────┘
 ```
 ## 🏗️ System Architecture
 
@@ -87,8 +53,31 @@ flowchart LR
     Haversine <--> JPA
     JPA <-->|"SSL Connection"| DB
 ```
+<details>
+<summary><b>🔐 View End-to-End Encryption (E2EE) Message Flow</b></summary>
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as Alice (React Client)
+    participant Server as Spring Boot + PostgreSQL
+    actor Bob as Bob (React Client)
 
+    Note over Alice,Bob: Key Exchange Phase
+    Alice->>Server: Upload Public ECDH Key
+    Bob->>Server: Upload Public ECDH Key
+    Alice->>Server: Fetch Bob's Public Key
+    Note right of Alice: Derives Shared Secret (ECDH)
+
+    Note over Alice,Bob: Messaging Phase
+    Alice->>Alice: Encrypt message with AES-256-GCM
+    Alice->>Server: Send Ciphertext + IV via STOMP/REST
+    Server-->>Server: Store Ciphertext (Zero Knowledge)
+    Server->>Bob: Push Ciphertext via WebSocket
+    Bob->>Bob: Derive Shared Secret & Decrypt locally
+```
+
+</details>
 
 ## 📂 Project Structure
 
