@@ -155,3 +155,38 @@ Make sure you have the following installed:
 ```bash
 git clone <your-repository-url>
 cd "Numberless fully - encrypted - based Chat system"
+```
+
+### 2. Configure Database Credentials
+Set your PostgreSQL connection details in backend/src/main/resources/application.properties (or export them as environment variables):
+```bash
+spring.datasource.url=jdbc:postgresql://<your-neon-host>/<dbname>?sslmode=require
+spring.datasource.username=<your-db-username>
+spring.datasource.password=<your-db-password>
+```
+### 3. Start the Backend (Spring Boot)
+Open a terminal in the project root:
+```bash
+cd backend
+mvn clean spring-boot:run
+```
+### 4. Start the Frontend (React + Vite)
+Open a second terminal in the project root:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+### 🐳 Run with Docker (Single Command)
+If you have Docker installed, you can build and run the entire full-stack app (Frontend + Backend combined) in one container:
+```bash
+# 1. Build the image
+docker build -t cipherchat .
+
+# 2. Run the container
+docker run -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL="jdbc:postgresql://<your-neon-host>/<dbname>?sslmode=require" \
+  -e SPRING_DATASOURCE_USERNAME="<your-db-username>" \
+  -e SPRING_DATASOURCE_PASSWORD="<your-db-password>" \
+  cipherchat
+```
